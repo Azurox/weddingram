@@ -10,8 +10,25 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@nuxt/eslint": "^1.5.2",
+    "@tailwindcss/vite": "^4.1.11",
+    "drizzle-orm": "^0.44.3",
+    "drizzle-zod": "^0.8.2",
+    "eslint": "^9.31.0",
+    "exifreader": "^4.31.1",
+    "neverthrow": "^8.2.0",
     "nuxt": "^3.17.7",
+    "nuxt-auth-utils": "^0.5.20",
+    "nuxt-file-storage": "^0.3.0",
+    "pg": "^8.16.3",
+    "tailwindcss": "^4.1.11",
     "vue": "^3.5.17",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.4",
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.20.3"
   }
 }
