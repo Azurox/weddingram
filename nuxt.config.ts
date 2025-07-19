@@ -7,7 +7,12 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
   },
-  modules: ['@nuxt/eslint', 'nuxt-auth-utils', 'nuxt-file-storage'],
+  modules: [
+    '@nuxt/eslint',
+    'nuxt-auth-utils',
+    'nuxt-file-storage',
+    '@vueuse/nuxt'
+  ],
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [

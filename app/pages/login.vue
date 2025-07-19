@@ -3,7 +3,7 @@
     <form @submit.prevent="login">
       <div>
         <label for="password">Password:</label>
-        <input id="password" v-model="password" type="password" required>
+        <input id="password" v-model="password" type="password" required autocomplete="current-password">
       </div>
       <button type="submit">Login</button>
     </form>
@@ -11,9 +11,27 @@
 </template>
 
 <script lang="ts" setup>
-const password = ref("");
+const { fetch: fetchUserSession } = useUserSession()
 
-function login() {
-  // verify master password
+const password = ref("");
+const isLoading = ref(false);
+const hasError = ref(false);
+
+async function login() {
+  try {
+    isLoading.value = true;
+    hasError.value = false;
+
+    await $fetch('/api/auth/login', {
+      method: 'POST',
+      body: { password: password.value },
+    })
+    await fetchUserSession()
+  } catch (error) {
+    hasError.value = true;
+    console.error("Login failed:", error);
+  } finally {
+    isLoading.value = false;
+  }
 }
 </script>

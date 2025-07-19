@@ -6,6 +6,7 @@ import { guests } from './guest-schema'
 export const eventState = pgEnum('event_state', ['draft', 'started', 'done'])
 export type EventState = typeof eventState.enumValues[number];
 export const eventBucketType = pgEnum('event_bucket_type', ['R2', 'filesystem'])
+export type EventBucketType = typeof eventBucketType.enumValues[number];
 
 export const events = pgTable('events', {
   id: uuid('id').primaryKey().defaultRandom(),

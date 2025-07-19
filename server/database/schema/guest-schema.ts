@@ -5,7 +5,7 @@ import { events } from './event-schema'
 
 export const guests = pgTable('guests', {
   id: uuid('id').primaryKey().defaultRandom(),
-  nickname: varchar('nickname', { length: 255 }),
+  nickname: varchar('nickname', { length: 255 }).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),

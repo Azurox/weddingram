@@ -12,8 +12,8 @@
   "dependencies": {
     "@nuxt/eslint": "^1.5.2",
     "@tailwindcss/vite": "^4.1.11",
+    "@vueuse/nuxt": "^13.5.0",
     "drizzle-orm": "^0.44.3",
-    "drizzle-zod": "^0.8.2",
     "eslint": "^9.31.0",
     "exifreader": "^4.31.1",
     "neverthrow": "^8.2.0",

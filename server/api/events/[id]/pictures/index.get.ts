@@ -14,6 +14,15 @@ const querySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
 
+export type UploadedPicture = {
+    id: string;
+    url: string;
+    capturedAt: Date;
+    createdAt: Date;
+    guestId: string;
+    guestNickname: string | null;
+}
+
 export default defineEventHandler(async (event) => {
   const eventId = await getValidatedRouterParams(event, eventIdRouterParam.parse)
   const query = await getValidatedQuery(event, querySchema.parse)
@@ -43,7 +52,7 @@ export default defineEventHandler(async (event) => {
     .where(eq(pictures.eventId, eventId))
 
   // Get paginated pictures - ALL pictures for the event with guest information
-  const picturesList = await db
+  const picturesList: UploadedPicture[] = await db
     .select({
       id: pictures.id,
       url: pictures.url,

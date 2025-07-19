@@ -13,6 +13,8 @@ export default defineEventHandler(async (event) => {
 
   const db = useDrizzle()
   await db.delete(events).where(eq(events.id, eventId))
+  // TODO delete cover image from storage
+  // TODO delete all event photos from storage
 
   setResponseStatus(event, 204)
 })
