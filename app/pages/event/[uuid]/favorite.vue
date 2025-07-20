@@ -7,11 +7,7 @@
       <NuxtLink :to="`/event/${uuid}/favorite`">
         Favorite
       </NuxtLink>
-    </div>
-    {{ event }}
-
-    <div>
-      <event-picture-thumbnail-list/>
+      <event-picture-thumbnail-favorite-list/>
     </div>
   </div>
 </template>
@@ -22,7 +18,6 @@ definePageMeta({
 })
 
 const { uuid } = useRoute().params as { uuid: string };
-const { data: event } = await useFetch(`/api/events/${uuid}`)
 
 </script>
 

@@ -1,15 +1,16 @@
 declare module '#auth-utils' {
   interface User {
-    id: string;
+    id?: string;
   }
 
   interface UserSession {
     loggedInAt: Date;
   }
 
-  /* Not used for now
-    interface SecureSessionData { }
-  */
+  interface SecureSessionData { 
+    isAdmin: boolean;
+  }
+ 
 }
 
 export {}

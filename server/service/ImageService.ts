@@ -1,8 +1,15 @@
-// TODO :  verify that the file is publicly accessible
-export function buildCoverImageUrl(filename: string) {
-    return `public/events-cover/${filename}`;
+export function buildCoverImageUrl(eventId: string,filename: string) {
+    return `public/events/${eventId}/cover/${filename}`;
 }
 
-export function getCoverImageFolder() {
-    return 'public/events-cover/';
+export function getCoverImageFolder(eventId: string) {
+    return `public/events/${eventId}/cover/`;
+}
+
+export function getUploadedPictureFolder(eventId: string) {
+    return `public/events/${eventId}/pictures/`;
+}
+
+export function buildUploadedPictureUrl(eventId: string, filename: string) {
+    return `public/events/${eventId}/pictures/${filename}`;
 }

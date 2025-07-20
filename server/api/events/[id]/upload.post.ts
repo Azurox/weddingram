@@ -3,12 +3,14 @@ import z from "zod"
 import type { events } from "~~/server/database/schema/event-schema"
 import { getEventById } from "~~/server/service/EventService"
 import crypto from "crypto"
-import path from "path"
 import { useDrizzle } from "~~/server/database"
 import { pictures } from "~~/server/database/schema/picture-schema"
 import ExifReader from 'exifreader';
+import { buildUploadedPictureUrl, getUploadedPictureFolder } from "~~/server/service/ImageService"
 
-const eventIdRouterParam = z.uuid()
+const eventIdRouterParam = z.object({
+  id: z.uuid()
+})
 
 // Currently this method only supports filesystem storage
 // We may need to change how we answer to the client so it's not blocking, maybe making the client send image one by one or using websocket or a stream response
@@ -16,9 +18,16 @@ const eventIdRouterParam = z.uuid()
 // Or use SSE
 export default defineEventHandler(async (event) => {
 
-  const eventId = await getValidatedRouterParams(event, eventIdRouterParam.parse)
+  const {id: eventId} = await getValidatedRouterParams(event, eventIdRouterParam.parse)
   const { files } = await readBody<{ files: ServerFile[] }>(event)
   const session = await requireUserSession(event)
+
+  if(!session.user.id) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+    })
+  }
 
   const weddingEvent = await getEventById(eventId)
 
@@ -52,13 +61,13 @@ export default defineEventHandler(async (event) => {
 
     const pictureId = crypto.randomUUID()
     
-    await savePictureInBucket(pictureId, file, weddingEvent)
+    const url = await savePictureInBucket(eventId, pictureId, file, weddingEvent)
     const exifData = await extractExifData(file)
     await db.insert(pictures).values({
       eventId,
       id: pictureId,
       guestId: session.user.id,
-      url: path.join(weddingEvent.bucketUri, file.name),
+      url: url,
       capturedAt: exifData.capturedAt,
     })
 
@@ -71,13 +80,15 @@ export default defineEventHandler(async (event) => {
 })
 
 
-async function savePictureInBucket(pictureId: string, file: ServerFile, weddingEvent: typeof events.$inferSelect) {
+async function savePictureInBucket(eventId: string,  pictureId: string, file: ServerFile, weddingEvent: typeof events.$inferSelect) {
   if (weddingEvent.bucketType === 'filesystem') {
-    await storeFileLocally(
+    const fileName = await storeFileLocally(
       file,
       pictureId,
-      weddingEvent.bucketUri  
+      getUploadedPictureFolder(eventId)
     )
+
+    return buildUploadedPictureUrl(eventId, fileName)
   } else {
     throw createError({
       statusCode: 501,

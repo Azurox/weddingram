@@ -3,14 +3,14 @@ import { events } from "~~/server/database/schema/event-schema"
 import { eq } from "drizzle-orm"
 import z from "zod"
 
-const getEventParamsSchema = z.object({
-  id: z.string().uuid("Invalid event ID format")
+const eventIdRouterParam = z.object({
+  id: z.uuid()
 })
 
 export default defineEventHandler(async (event) => {
   const db = useDrizzle()
   
-  const { id } = await getValidatedRouterParams(event, getEventParamsSchema.parse)
+  const {id: eventId} = await getValidatedRouterParams(event, eventIdRouterParam.parse)
 
   const [foundEvent] = await db
     .select({
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
       updatedAt: events.updatedAt
     })
     .from(events)
-    .where(eq(events.id, id))
+    .where(eq(events.id, eventId))
     .limit(1)
 
   if (!foundEvent) {

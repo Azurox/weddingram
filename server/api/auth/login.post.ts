@@ -1,5 +1,4 @@
 import z from "zod"
-import crypto from "node:crypto"
 
 const loginRequestSchema = z.object({
   password: z.string().max(255),
@@ -20,12 +19,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const temporaryId = crypto.randomUUID()
 
   await setUserSession(event, {
     loggedInAt: new Date(),
-    user: {
-      id: temporaryId
+    user: { },
+    secure: {
+      isAdmin: true,
     }
   })
 

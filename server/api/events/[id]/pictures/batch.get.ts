@@ -3,7 +3,7 @@ import { useDrizzle } from "~~/server/database"
 import { pictures } from "~~/server/database/schema/picture-schema"
 import { guests } from "~~/server/database/schema/guest-schema"
 import { getEventById } from "~~/server/service/EventService"
-import { eq } from "drizzle-orm"
+import { eq, and, inArray } from "drizzle-orm"
 
 const eventIdRouterParam = z.uuid()
 
@@ -42,22 +42,12 @@ export default defineEventHandler(async (event) => {
     .from(pictures)
     .leftJoin(guests, eq(pictures.guestId, guests.id))
     .where(
-      eq(pictures.eventId, eventId)
+      and(
+        eq(pictures.eventId, eventId),
+        inArray(pictures.id, validatedBody.pictureIds)
+      )
     )
 
-  // Filter the results to only include requested picture IDs
-  const filteredPictures = picturesList.filter(picture => 
-    validatedBody.pictureIds.includes(picture.id)
-  )
 
-  // Return pictures in the same order as requested IDs, with null for missing ones
-  const orderedPictures = validatedBody.pictureIds.map(id => {
-    return filteredPictures.find(picture => picture.id === id) || null
-  })
-
-  return {
-    pictures: orderedPictures,
-    requestedCount: validatedBody.pictureIds.length,
-    foundCount: filteredPictures.length,
-  }
+  return picturesList
 })

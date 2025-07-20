@@ -58,8 +58,8 @@ async function saveCoverImage(file: ServerFile, eventId: string) {
   const fileName = await storeFileLocally(
     file,
     eventId,
-    getCoverImageFolder()
+    getCoverImageFolder(eventId)
   )
 
-  return buildCoverImageUrl(fileName)
+  return buildCoverImageUrl(eventId, fileName,)
 }
