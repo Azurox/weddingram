@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@nuxt/eslint": "^1.5.2",
+    "@nuxt/fonts": "^0.11.4",
     "@tailwindcss/vite": "^4.1.11",
     "@vueuse/nuxt": "^13.5.0",
     "drizzle-orm": "^0.44.3",
@@ -21,6 +22,7 @@
     "nuxt-auth-utils": "^0.5.20",
     "nuxt-file-storage": "^0.3.0",
     "pg": "^8.16.3",
+    "qr-creator": "^1.0.0",
     "tailwindcss": "^4.1.11",
     "vue": "^3.5.17",
     "vue-router": "^4.5.1",

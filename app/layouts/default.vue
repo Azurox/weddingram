@@ -1,6 +1,6 @@
 <template>
-  <div class="h-[100svh] flex flex-col">
-    <main class="flex-1 pb-20">
+  <div class="flex w-full min-h-[100svh]">
+    <main class="flex w-full">
       <slot />
     </main>
   </div>

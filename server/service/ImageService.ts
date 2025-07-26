@@ -1,5 +1,5 @@
 export function buildCoverImageUrl(eventId: string,filename: string) {
-    return `public/events/${eventId}/cover/${filename}`;
+    return `/events/${eventId}/cover/${filename}`;
 }
 
 export function getCoverImageFolder(eventId: string) {
@@ -11,5 +11,5 @@ export function getUploadedPictureFolder(eventId: string) {
 }
 
 export function buildUploadedPictureUrl(eventId: string, filename: string) {
-    return `public/events/${eventId}/pictures/${filename}`;
+    return `/events/${eventId}/pictures/${filename}`;
 }

@@ -11,7 +11,8 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     'nuxt-auth-utils',
     'nuxt-file-storage',
-    '@vueuse/nuxt'
+    '@vueuse/nuxt',
+    '@nuxt/fonts'
   ],
   css: ['~/assets/css/main.css'],
   vite: {

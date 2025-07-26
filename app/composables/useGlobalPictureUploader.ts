@@ -9,7 +9,7 @@ export const useGlobalPictureUploader = () => {
   async function uploadPictures(files: FilesType) {
     isLoading.value = true;
     try {
-      const result = await $fetch(`/api/events/${uuid}/upload`, {
+      const result = await $fetch(`/api/events/single/${uuid}/upload`, {
         method: 'POST',
         body: {
           files: files,
