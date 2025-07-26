@@ -17,6 +17,8 @@
 const { uuid } = useRoute().params as { uuid: string };
 const { data: event } = await useFetch(`/api/events/${uuid}`)
 const registerError = ref<string>()
+const { fetch: fetchUserSession } = useUserSession()
+
 
 const form = reactive({
   name: '',
@@ -26,13 +28,14 @@ const isLoading = ref(false);
 async function registerToEvent() {
   isLoading.value = true;
   try {
-    await $fetch(`/api/events/${uuid}/register`, {
+    await $fetch(`/api/events/single/${uuid}/register`, {
       method: 'POST',
       body: { nickname: form.name },
     });
-    
-    // Redirect to the event gallery after successful registration
-    await navigateTo(`/event/${uuid}`)
+
+    await fetchUserSession()
+
+    await navigateTo(`/event/${uuid}/`);
   } catch (error) {
     registerError.value = "Registration failed. Please try again.";
     console.error("Registration failed:", error);
