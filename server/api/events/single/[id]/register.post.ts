@@ -25,12 +25,9 @@ export default defineEventHandler(async (event) => {
 
   await setUserSession(event, {
     user: {
-      name: nickname,
       id: guest.id,
+      isAdmin: false,
     },
-    secure: {
-      eventId,
-    }
   })
 
   setResponseStatus(event, 204)

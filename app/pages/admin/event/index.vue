@@ -28,6 +28,10 @@
 </template>
 
 <script lang="ts" setup>
+definePageMeta({
+  middleware: 'admin-registration'
+})
+
 const creationDialog = useTemplateRef('creationDialog');
 const { data: events } = await useFetch('/api/events')
 

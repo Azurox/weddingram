@@ -22,10 +22,9 @@ export default defineEventHandler(async (event) => {
 
   await setUserSession(event, {
     loggedInAt: new Date(),
-    user: { },
-    secure: {
+    user: {
       isAdmin: true,
-    }
+     },
   })
 
   setResponseStatus(event, 204)

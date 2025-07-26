@@ -8,9 +8,9 @@
 </template>
 
 <script lang="ts" setup>
-import type { UploadedPicture } from '~~/server/api/events/[id]/pictures/index.get';
 import type { SerializeObject } from 'nitropack'
 import { useStorage } from '@vueuse/core'
+import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/index.get';
 
 const {picture} = defineProps<{
   picture: SerializeObject<UploadedPicture>

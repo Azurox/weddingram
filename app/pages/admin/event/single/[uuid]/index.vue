@@ -74,7 +74,10 @@ fill="currentColor"
 </template>
 
 <script lang="ts" setup>
-import { AdminEventQrCodeGenerator } from '#components';
+definePageMeta({
+  middleware: 'admin-registration'
+})
+
 const { uuid } = useRoute().params as { uuid: string };
 const { data: event } = await useFetch(`/api/events/single/${uuid}`)
 const isLoadingDelete = ref(false);

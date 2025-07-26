@@ -48,13 +48,12 @@ async function login() {
   try {
     isLoading.value = true;
     hasError.value = false;
-
     await $fetch('/api/auth/login', {
       method: 'POST',
       body: { password: password.value },
     })
     await fetchUserSession()
-    router.replace('/admin/event');
+    router.push({path: '/admin/event/'});
   } catch (error) {
     hasError.value = true;
     console.error("Login failed:", error);
