@@ -1,10 +1,13 @@
 <template>
-  <div class="grid grid-cols-3">
-    <event-picture-thumbnail
-      v-for="thumbnail in thumbnails?.pictures"
-      :key="thumbnail.id"
-      :picture="thumbnail"
-    />
+  <div>
+    <template v-if="thumbnails?.pictures.length === 0">
+      <NuxtLink :to="`/event/${uuid}/upload`" class="p-10 mx-5 mt-10 block bg-white border border-dashed border-almond-500 text-neutral-600 text-center rounded-lg">
+        Be the first to upload a picture and share the moment ✨
+      </NuxtLink>
+    </template>
+    <div v-else class="grid grid-cols-3 gap">
+      <event-picture-thumbnail v-for="thumbnail in thumbnails?.pictures" :key="thumbnail.id" :picture="thumbnail" />
+    </div>
   </div>
 </template>
 
@@ -12,10 +15,6 @@
 const { uuid } = useRoute().params as { uuid: string };
 type AvailableSortby = 'recent' | 'startOfWedding' | 'endOfWedding'
 
-
-const {
-  data: thumbnails,
-} = await useAsyncData(() => fetchSubmissions())
 const selectedSortby = ref<AvailableSortby>('recent')
 const currentPage = ref(1)
 
@@ -28,17 +27,19 @@ const sortByMapping = computed(() => {
   }
 })
 
-async function fetchSubmissions() {
-  return $fetch(`/api/events/${uuid}/pictures`, {
-    params: {
-      page: currentPage.value,
-      sort: sortByMapping.value.sort,
-      direction: sortByMapping.value.direction,
-    },
-  })
-}
+const {
+  data: thumbnails,
+} = await useFetch(`/api/events/single/${uuid}/pictures`, {
+  method: 'GET',
+  params: {
+    page: currentPage.value,
+    sort: sortByMapping.value.sort,
+    direction: sortByMapping.value.direction,
+  },
+
+})
+
+
 </script>
 
-<style>
-
-</style>
+<style></style>

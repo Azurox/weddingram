@@ -6,7 +6,8 @@
 
 <script lang="ts" setup>
 definePageMeta({
-  middleware: 'guest-registration'
+  middleware: 'guest-registration',
+  layout: 'application',
 })
 
 </script>

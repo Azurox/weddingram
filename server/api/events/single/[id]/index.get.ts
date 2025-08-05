@@ -18,13 +18,6 @@ export default defineEventHandler(async (event) => {
       name: events.name,
       shortName: events.shortName,
       imageUrl: events.imageUrl,
-      bucketType: events.bucketType,
-      bucketUri: events.bucketUri,
-      state: events.state,
-      startDate: events.startDate,
-      endDate: events.endDate,
-      createdAt: events.createdAt,
-      updatedAt: events.updatedAt
     })
     .from(events)
     .where(eq(events.id, eventId))

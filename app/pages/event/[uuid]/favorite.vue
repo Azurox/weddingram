@@ -14,7 +14,8 @@
 
 <script lang="ts" setup>
 definePageMeta({
-  middleware: 'guest-registration'
+  middleware: 'guest-registration',
+  layout: 'application',
 })
 
 const { uuid } = useRoute().params as { uuid: string };

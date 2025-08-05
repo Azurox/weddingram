@@ -5,7 +5,9 @@ import { guests } from "~~/server/database/schema/guest-schema"
 import { getEventById } from "~~/server/service/EventService"
 import { eq, desc, asc, sql } from "drizzle-orm"
 
-const eventIdRouterParam = z.uuid()
+const eventIdRouterParam = z.object({
+  id: z.uuid()
+})
 
 const querySchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -15,16 +17,16 @@ const querySchema = z.object({
 })
 
 export type UploadedPicture = {
-    id: string;
-    url: string;
-    capturedAt: Date;
-    createdAt: Date;
-    guestId: string;
-    guestNickname: string | null;
+  id: string;
+  url: string;
+  capturedAt: Date;
+  createdAt: Date;
+  guestId: string;
+  guestNickname: string | null;
 }
 
 export default defineEventHandler(async (event) => {
-  const eventId = await getValidatedRouterParams(event, eventIdRouterParam.parse)
+  const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
   const query = await getValidatedQuery(event, querySchema.parse)
 
   // Verify event exists
@@ -37,7 +39,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const db = useDrizzle()
-  
+
   // Calculate offset for pagination
   const offset = (query.page - 1) * query.limit
 

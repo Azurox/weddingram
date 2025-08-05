@@ -25,5 +25,6 @@
     --color-merino-900: #5a3e34;
     --color-merino-950: #30201a;
 
-    --font-logo: "Lavishly Yours";
+    --font-logo: "Playfair Display";
+    --font-body: "Inter", sans-serif;
 }
