@@ -25,6 +25,6 @@ export default defineNuxtConfig({
     masterPassword: process.env.WEDDING_MASTER_PASSWORD || '',
   },
    fileStorage: {
-     mount: process.env.WEDDING_STORAGE_MOUNT || '/'
+     mount: process.env.WEDDING_STORAGE_MOUNT || ''
    }
 })

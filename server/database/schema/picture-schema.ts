@@ -1,4 +1,4 @@
-import {  pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import {  pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import { events } from './event-schema'
 import { relations } from 'drizzle-orm'
 import { guests } from './guest-schema'
@@ -11,6 +11,7 @@ export const pictures = pgTable('pictures', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   guestId: uuid('guest_id').notNull().references(() => guests.id, { onDelete: 'cascade' }),
   eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  pictureHash: varchar('picture_hash', {length: 64}).notNull().unique(),
 })
 
 export const picturesRelations = relations(pictures, ({  one }) => ({

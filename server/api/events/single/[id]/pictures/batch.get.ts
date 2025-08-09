@@ -5,18 +5,25 @@ import { guests } from "~~/server/database/schema/guest-schema"
 import { getEventById } from "~~/server/service/EventService"
 import { eq, and, inArray } from "drizzle-orm"
 
-const eventIdRouterParam = z.uuid()
+
+const eventIdRouterParam = z.object({
+  id: z.uuid()
+})
 
 const bodySchema = z.object({
-  pictureIds: z.array(z.string().uuid()).min(1).max(100),
+  pictureIds: z.union([
+    z.uuid(),
+    z.array(z.string())
+  ]).transform((val) => Array.isArray(val) ? val : [val]).pipe(
+    z.array(z.uuid())
+  ),
 })
 
 export default defineEventHandler(async (event) => {
-  const eventId = await getValidatedRouterParams(event, eventIdRouterParam.parse)
-  const { pictureIds } = await readBody(event)
+  const {id: eventId} = await getValidatedRouterParams(event, eventIdRouterParam.parse)
+  const { pictureIds } = await getValidatedQuery(event, bodySchema.parse)
   
   // Validate the request body
-  const validatedBody = bodySchema.parse({ pictureIds })
 
   // Verify event exists
   const weddingEvent = await getEventById(eventId)
@@ -44,7 +51,7 @@ export default defineEventHandler(async (event) => {
     .where(
       and(
         eq(pictures.eventId, eventId),
-        inArray(pictures.id, validatedBody.pictureIds)
+        inArray(pictures.id, pictureIds)
       )
     )
 

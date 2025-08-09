@@ -1,13 +1,27 @@
 <template>
-  <div>
+  <div class="relative">
     <template v-if="thumbnails?.pictures.length === 0">
-      <NuxtLink :to="`/event/${uuid}/upload`" class="p-10 mx-5 mt-10 block bg-white border border-dashed border-almond-500 text-neutral-600 text-center rounded-lg">
-        Be the first to upload a picture and share the moment ✨
-      </NuxtLink>
+      <UiContainer>
+        <NuxtLink :to="`/event/${uuid}/upload`" class="p-10 mx-5 mt-10 block bg-white border border-dashed border-almond-500 text-neutral-600 text-center rounded-lg">
+          Be the first to upload a picture and share the moment ✨
+        </NuxtLink>
+      </UiContainer>
     </template>
-    <div v-else class="grid grid-cols-3 gap">
-      <event-picture-thumbnail v-for="thumbnail in thumbnails?.pictures" :key="thumbnail.id" :picture="thumbnail" />
-    </div>
+    <template v-else>
+      <div class="sticky top-0 z-10 bg-almond-50  px-2 py-3  border-b border-b-almond-700/20">
+        <UiContainer class="flex items-center gap-4">
+          <label for="sort-by" class="font-logo tracking-wider font-medium">Sort by:</label>
+          <select id="sort-by" v-model="selectedSortby" class="bg-white border border-almond-200 rounded-lg p-2 text-sm font-medium text-almond-700">
+            <option value="recent">Recently uploaded</option>
+            <option value="startOfWedding">Start of Wedding</option>
+            <option value="endOfWedding">End of Wedding</option>
+          </select>
+        </UiContainer>
+      </div>
+      <UiContainer class="grid grid-cols-3 gap">
+        <event-picture-thumbnail v-for="thumbnail in thumbnails?.pictures" :key="thumbnail.id" :picture="thumbnail" />
+      </UiContainer>
+    </template>
   </div>
 </template>
 
