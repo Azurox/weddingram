@@ -64,6 +64,9 @@ export default defineEventHandler(async (event) => {
 
    // TODO : Test if spamming the server with too many files per request could causes issues, in such case, implement a global queue system or use a worker thread
    // To verify if its possible in nuxt / nitro, there seems to be poor documentation on this topic
+
+   // This needs to be converted to a single transaction and not 1 transaction per picture
+   // Check if it's possible to Promise all (extractExifData(file))
   for (const [index, file] of files.entries()) {
     if (!file || !file.name || !file.content) {
       uploadedFilesResult[index] = {

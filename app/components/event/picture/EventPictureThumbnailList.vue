@@ -18,17 +18,22 @@
           </select>
         </UiContainer>
       </div>
-      <UiContainer class="grid grid-cols-3 gap">
-        <event-picture-thumbnail v-for="thumbnail in thumbnails?.pictures" :key="thumbnail.id" :picture="thumbnail" />
+      <UiContainer  class="grid grid-cols-3 gap">
+        <event-picture-thumbnail v-for="thumbnail in pictureList" :key="thumbnail.id" :picture="thumbnail" />
       </UiContainer>
     </template>
   </div>
 </template>
 
 <script lang="ts" setup>
-const { uuid } = useRoute().params as { uuid: string };
+import { useInfiniteScroll } from '@vueuse/core'
+import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/index.get';
+import type { SerializeObject } from 'nitropack'
+
 type AvailableSortby = 'recent' | 'startOfWedding' | 'endOfWedding'
 
+const { uuid } = useRoute().params as { uuid: string };
+const pictureList = ref<SerializeObject<UploadedPicture>[]>()
 const selectedSortby = ref<AvailableSortby>('recent')
 const currentPage = ref(1)
 
@@ -41,19 +46,46 @@ const sortByMapping = computed(() => {
   }
 })
 
-const {
-  data: thumbnails,
-} = await useFetch(`/api/events/single/${uuid}/pictures`, {
-  method: 'GET',
-  params: {
-    page: currentPage.value,
-    sort: sortByMapping.value.sort,
-    direction: sortByMapping.value.direction,
-  },
+const fetchParams = computed(() => ({
+  page: currentPage.value,
+  sort: sortByMapping.value.sort,
+  direction: sortByMapping.value.direction,
+}))
 
+const hasMore = computed(() => {
+  return thumbnails.value?.pagination.hasNextPage ?? false
 })
 
 
-</script>
+const { data: thumbnails, pending } = await useFetch(`/api/events/single/${uuid}/pictures`, {
+  method: 'GET',
+  params: fetchParams,
+})
 
-<style></style>
+watch(thumbnails, (newVal) => {
+  if (newVal) {
+    if (currentPage.value === 1) {
+      pictureList.value = newVal.pictures
+    } else {
+      pictureList.value = [...(pictureList.value ?? []), ...newVal.pictures]
+    }
+  }
+}, { immediate: true })
+
+
+
+useInfiniteScroll(
+  window,
+  () => {
+    if(!pending.value ) {
+      currentPage.value += 1
+    }
+  },
+  {
+    distance: 300,
+    canLoadMore: () => {
+      return hasMore.value && !pending.value
+    },
+  }
+)
+</script>
