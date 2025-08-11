@@ -40,7 +40,7 @@
 
 <script lang="ts" setup>
 const { handleFileInput, files } = useFileStorage()
-const { uploadPictures } = useGlobalPictureUploader()
+const { uploadPictures, isLoading } = useGlobalPictureUploader()
 
 // Reactive state for drag and drop
 const isDragOver = ref(false)
@@ -78,11 +78,11 @@ async function handleFileInputAndUpload(event: Event) {
   handleFileInput(event)
 }
 
-watch(files, async () => {
-  if (files.value && files.value.length > 0) {
+watchDebounced(files, async () => {
+  if (files.value && files.value.length > 0 && !isLoading.value) {
     startUploadProcess()
   }
-}, { deep: true })
+}, { deep: true, flush: 'post', debounce: 300 })
 
 async function startUploadProcess() {
   await uploadPictures(files.value)

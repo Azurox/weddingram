@@ -23,27 +23,41 @@ export const useGlobalPictureUploader = () => {
     return hashHex;
   }
 
+  async function uploadBatch(files: FilesType, filesInformations: { hash: string }[]) {
+    const result = await $fetch(`/api/events/single/${uuid}/upload`, {
+      method: 'POST',
+      body: {
+        files: files,
+        filesInformations: filesInformations
+      }
+    });
+    return result;
+  }
+
   async function uploadPictures(files: FilesType) {
     isLoading.value = true;
 
-    const filesInformations: { hash: string }[] = []
-    
-    // Calculate hash for each file
-    for (const file of files) {
-      const hash = await calculateFileHash(file);
-      filesInformations.push({ hash });
-    }
-
     try {
-      const result = await $fetch(`/api/events/single/${uuid}/upload`, {
-        method: 'POST',
-        body: {
-          files: files,
-          filesInformations: filesInformations
-        }
-      })
+      const batchSize = 5;
 
-      console.log("Upload result:", result);
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+        const batchNumber = Math.floor(i / batchSize) + 1;
+        
+
+        // Calculate hash for each file in the batch
+        const filesInformations: { hash: string }[] = [];
+        for (const file of batch) {
+          const hash = await calculateFileHash(file);
+          filesInformations.push({ hash });
+        }
+
+        // Upload the batch
+        const result = await uploadBatch(batch, filesInformations);
+        console.log(`Batch ${batchNumber} upload result:`, result);
+      }
+
+      console.log("All batches uploaded successfully");
     } catch (error) {
       console.error("Failed to upload pictures:", error);
     } finally {

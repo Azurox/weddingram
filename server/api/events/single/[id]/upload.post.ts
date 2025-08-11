@@ -14,7 +14,7 @@ const eventIdRouterParam = z.object({
 
 const fileInformationsSchema = z.array(z.object({
   hash: z.string().length(64), // SHA-256 hash of the file
-}))
+})).max(5)
 
 // Currently this method only supports filesystem storage
 // We may need to change how we answer to the client so it's not blocking, maybe making the client send image one by one or using websocket or a stream response
@@ -61,12 +61,10 @@ export default defineEventHandler(async (event) => {
 
   const db = useDrizzle()
   const uploadedFilesResult: Record<number, {status: string, message?: string}> = {}
+  const pictureRecords: Array<typeof pictures.$inferInsert> = []
 
    // TODO : Test if spamming the server with too many files per request could causes issues, in such case, implement a global queue system or use a worker thread
    // To verify if its possible in nuxt / nitro, there seems to be poor documentation on this topic
-
-   // This needs to be converted to a single transaction and not 1 transaction per picture
-   // Check if it's possible to Promise all (extractExifData(file))
   for (const [index, file] of files.entries()) {
     if (!file || !file.name || !file.content) {
       uploadedFilesResult[index] = {
@@ -76,23 +74,36 @@ export default defineEventHandler(async (event) => {
       continue
     }
 
-    const pictureId = crypto.randomUUID()
-    
-    const url = await savePictureInBucket(eventId, pictureId, file, weddingEvent)
-    const exifData = await extractExifData(file)
+    try {
+      const pictureId = crypto.randomUUID()
+      
+      const url = await savePictureInBucket(eventId, pictureId, file, weddingEvent)
+      const exifData = await extractExifData(file)
 
-    await db.insert(pictures).values({
-      eventId,
-      id: pictureId,
-      guestId: session.user.id,
-      url: url,
-      capturedAt: exifData.capturedAt,
-      pictureHash: parsedFilesInformations[index].hash,
-    }).onConflictDoNothing()
+      pictureRecords.push({
+        eventId,
+        id: pictureId,
+        guestId: session.user.id,
+        url: url,
+        capturedAt: exifData.capturedAt,
+        pictureHash: parsedFilesInformations[index].hash,
+      })
 
-    uploadedFilesResult[index] = {
-      status: 'success',
+      uploadedFilesResult[index] = {
+        status: 'success',
+      }
+    } catch (error) {
+      console.error(`Error processing file ${index}:`, error)
+      uploadedFilesResult[index] = {
+        status: 'error',
+        message: 'Failed to process file',
+      }
     }
+  }
+
+  // Batch insert all successfully processed pictures
+  if (pictureRecords.length > 0) {
+    await db.insert(pictures).values(pictureRecords).onConflictDoNothing()
   }
 
   setResponseStatus(event, 204)

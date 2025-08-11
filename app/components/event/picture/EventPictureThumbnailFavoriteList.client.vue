@@ -1,9 +1,11 @@
 
 <template>
   <div class="relative">
-    <template v-if="favoritePictureList?.length === 0">
+    <template v-if="favoritePictureList?.length === 0 && !pending">
       <UiContainer>
-        Start saving picture by clicking on the heart icon...
+        <span class="p-10 mx-5 mt-10 block bg-white border border-dashed border-almond-500 text-neutral-600 text-center rounded-lg">
+          Start saving picture favorites by clicking the heart icon on the right corner.
+        </span>
       </UiContainer>
     </template>
     <template v-else>
@@ -62,12 +64,23 @@ async function fetchFavoritePictures(page: number) {
     immediate: true,
   });
   if (data.value && Array.isArray(data.value)) {
+    // Clean up localStorage: remove IDs that weren't returned by the backend
+    const returnedIds = data.value.map(picture => picture.id);
+    const deletedIds = idsForPage.filter(id => !returnedIds.includes(id));
+    
+    if (deletedIds.length > 0) {
+      const { removeFavorite } = useFavoriteStorage();
+      deletedIds.forEach(id => removeFavorite(id));
+    }
+    
     if (page === 1) {
       favoritePictureList.value = data.value;
     } else {
       favoritePictureList.value = [...favoritePictureList.value, ...data.value];
     }
-    hasMore.value = idsForPage.length === PAGE_SIZE;
+    // Check if we have more pages to load based on remaining favorite IDs
+    const totalProcessedIds = page * PAGE_SIZE;
+    hasMore.value = totalProcessedIds < favoriteIds.value.length;
   } else {
     hasMore.value = false;
   }
