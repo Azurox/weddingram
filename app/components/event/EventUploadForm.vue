@@ -1,6 +1,6 @@
 <template>
   <div class="w-full max-w-2xl mx-auto p-6">
-    <div>
+    <form @submit.prevent="">
       <fieldset>
         <button
           class="appearance-none w-full relative cursor-pointer transition-all duration-300 ease-out min-h-[200px] flex items-center justify-center active:scale-95"
@@ -32,19 +32,29 @@
             @change="handleFileInputAndUpload"
           >
         </button>
-        
+
       </fieldset>
-    </div>
+    </form>
+
+    <event-upload-form-status :should-display="showProgress"/>
   </div>
 </template>
 
 <script lang="ts" setup>
+import { useTimeoutFn } from '@vueuse/core'
 const { handleFileInput, files } = useFileStorage()
 const { uploadPictures, isLoading } = useGlobalPictureUploader()
 
 // Reactive state for drag and drop
 const isDragOver = ref(false)
 const fileInputRef = ref<HTMLInputElement>()
+const showProgress = ref(false)
+
+const { isPending, start } = useTimeoutFn(() => {
+  if(isLoading.value === false) {
+    showProgress.value = false
+  }
+}, 2000, { immediate: false })
 
 // Drag and drop handlers
 function handleDragOver(event: DragEvent) {
@@ -85,10 +95,12 @@ watchDebounced(files, async () => {
 }, { deep: true, flush: 'post', debounce: 300 })
 
 async function startUploadProcess() {
+  showProgress.value = true
+  start()
   await uploadPictures(files.value)
+
+  if(isPending.value === false && showProgress.value === true) {
+    showProgress.value = false
+  }
 }
 </script>
-
-<style>
-
-</style>

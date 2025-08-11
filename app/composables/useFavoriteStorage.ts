@@ -12,8 +12,9 @@ export const useFavoriteStorage = () => {
   }
 
   function removeFavorite(pictureId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-    delete favorites.value[pictureId]
+    if(favorites.value[pictureId] ) {
+      favorites.value[pictureId] = false
+    }
   }
 
   function isInFavorite(pictureId: string): boolean {

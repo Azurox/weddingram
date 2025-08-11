@@ -1,6 +1,8 @@
 
 export const useGlobalPictureUploader = () => {  
   const isLoading = useState('isLoading', () => false);
+  const progress = useState<{current: number, total: number} | null>('uploadProgress', () => null);
+  const isUploadCompleted = useState('isUploadCompleted', () => false);
   const { uuid } = useRoute().params as { uuid: string };
   
   // We actually don't use the composable, only for the typing. A cleaner way to do it would be appreciated :)
@@ -36,7 +38,9 @@ export const useGlobalPictureUploader = () => {
 
   async function uploadPictures(files: FilesType) {
     isLoading.value = true;
+    isUploadCompleted.value = false;
 
+    progress.value = { current: 0, total: files.length };
     try {
       const batchSize = 5;
 
@@ -55,9 +59,11 @@ export const useGlobalPictureUploader = () => {
         // Upload the batch
         const result = await uploadBatch(batch, filesInformations);
         console.log(`Batch ${batchNumber} upload result:`, result);
+        progress.value.current += batch.length;
       }
 
       console.log("All batches uploaded successfully");
+      isUploadCompleted.value = true;
     } catch (error) {
       console.error("Failed to upload pictures:", error);
     } finally {
@@ -67,6 +73,8 @@ export const useGlobalPictureUploader = () => {
 
   return {
     isLoading,
+    progress,
+    isUploadCompleted,
     uploadPictures,
     calculateFileHash,
   }

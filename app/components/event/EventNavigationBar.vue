@@ -2,9 +2,10 @@
   <div class="menu-holder flex border-t border-t-almond-200 bg-white shadow-xl">
     <menu class="flex gap-6 items-center justify-between max-w-96 w-full mx-auto px-6">
       <li>
-        <NuxtLink :to="`/event/${uuid}/`" class="py-3 px-4 flex items-center justify-center group" active-class="active">
+        <NuxtLink :to="`/event/${uuid}/`" class="py-3 px-4 flex items-center justify-center group relative" active-class="active" @click="dismissUploadNotification">
           <svg class="size-7 text-neutral-600 group-[.active]:text-almond-500" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M4 21V9l8-6l8 6v12h-6v-7h-4v7z"/></svg>
           <span class="sr-only">Go to home</span>
+          <span v-if="isUploadCompleted" class="block size-3 rounded-full absolute right-2 top-2 bg-gradient-to-b from-almond-300 via-almond-500 to-almond-700/20 shadow-lg shadow-black/60 border border-almond-800/10 before:content-[''] before:absolute before:inset-0.5 before:bg-gradient-to-b before:from-white/60 before:to-transparent before:rounded-full"/>
         </NuxtLink>
       </li>
       <li>
@@ -31,7 +32,13 @@
 
 <script lang="ts" setup>
 const { uuid } = useRoute().params as { uuid: string };
+const { isUploadCompleted } = useGlobalPictureUploader()
 
+function dismissUploadNotification() {
+  if(isUploadCompleted.value) {
+    isUploadCompleted.value = false
+  }
+}
 </script>
 
 <style scoped>
