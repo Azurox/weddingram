@@ -17,9 +17,6 @@ const fileInformationsSchema = z.array(z.object({
 })).max(5)
 
 // Currently this method only supports filesystem storage
-// We may need to change how we answer to the client so it's not blocking, maybe making the client send image one by one or using websocket or a stream response
-// https://github.com/nitrojs/nitro/issues/1327 Send multiples {} as a stream response
-// Or use SSE
 export default defineEventHandler(async (event) => {
 
   const {id: eventId} = await getValidatedRouterParams(event, eventIdRouterParam.parse)
@@ -77,10 +74,11 @@ export default defineEventHandler(async (event) => {
     try {
       const pictureId = crypto.randomUUID()
       
-      const url = await savePictureInBucket(eventId, pictureId, file, weddingEvent)
+      const {url, filename} = await savePictureInBucket(eventId, pictureId, file, weddingEvent)
       const exifData = await extractExifData(file)
 
       pictureRecords.push({
+        filename,
         eventId,
         id: pictureId,
         guestId: session.user.id,
@@ -100,25 +98,34 @@ export default defineEventHandler(async (event) => {
       }
     }
   }
-
+  
   // Batch insert all successfully processed pictures
   if (pictureRecords.length > 0) {
-    await db.insert(pictures).values(pictureRecords).onConflictDoNothing()
+    const insertedPictures = await db.insert(pictures).values(pictureRecords).onConflictDoNothing().returning({
+      deleteId: pictures.magicDeleteId,
+      id: pictures.id,
+      url: pictures.url,
+    })
+
+    return insertedPictures
   }
 
-  setResponseStatus(event, 204)
+  return []
 })
 
 
 async function savePictureInBucket(eventId: string,  pictureId: string, file: ServerFile, weddingEvent: typeof events.$inferSelect) {
   if (weddingEvent.bucketType === 'filesystem') {
-    const fileName = await storeFileLocally(
+    const filename = await storeFileLocally(
       file,
       pictureId,
       getUploadedPictureFolder(eventId)
     )
 
-    return buildUploadedPictureUrl(eventId, fileName)
+    return {
+      url: buildUploadedPictureUrl(eventId, filename),
+      filename: filename
+    }
   } else {
     throw createError({
       statusCode: 501,
@@ -126,6 +133,7 @@ async function savePictureInBucket(eventId: string,  pictureId: string, file: Se
     })
   }
 }
+
 
 async function extractExifData(file: ServerFile) {
   try {

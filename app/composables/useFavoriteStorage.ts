@@ -1,7 +1,10 @@
 import { useStorage } from '@vueuse/core'
 
 export const useFavoriteStorage = () => {
-  const favorites = useStorage<Record<string, boolean>>('favorites', {})
+  const route = useRoute();
+  const uuid = computed(() => route.params.uuid as string);
+  const storageKey = computed(() => `favorites_${uuid.value}`);
+  const favorites = useStorage<Record<string, boolean>>(storageKey, {})
 
   function toggleFavorite(pictureId: string) {
     if (favorites.value[pictureId]) {

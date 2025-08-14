@@ -3,7 +3,9 @@ export const useGlobalPictureUploader = () => {
   const isLoading = useState('isLoading', () => false);
   const progress = useState<{current: number, total: number} | null>('uploadProgress', () => null);
   const isUploadCompleted = useState('isUploadCompleted', () => false);
-  const { uuid } = useRoute().params as { uuid: string };
+  const route = useRoute();
+  const uuid = computed(() => route.params.uuid as string);
+  const { addUploadedPictures } = useUploadedPictureStorage();
   
   // We actually don't use the composable, only for the typing. A cleaner way to do it would be appreciated :)
   const { files: _filesType } = useFileStorage()
@@ -26,7 +28,7 @@ export const useGlobalPictureUploader = () => {
   }
 
   async function uploadBatch(files: FilesType, filesInformations: { hash: string }[]) {
-    const result = await $fetch(`/api/events/single/${uuid}/upload`, {
+    const result = await $fetch(`/api/events/single/${uuid.value}/upload`, {
       method: 'POST',
       body: {
         files: files,
@@ -59,6 +61,12 @@ export const useGlobalPictureUploader = () => {
         // Upload the batch
         const result = await uploadBatch(batch, filesInformations);
         console.log(`Batch ${batchNumber} upload result:`, result);
+        
+        // Save uploaded pictures to storage
+        if (result && result.length > 0) {
+          addUploadedPictures(result);
+        }
+        
         progress.value.current += batch.length;
       }
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="menu-holder flex border-t border-t-almond-200 bg-white shadow-xl">
+  <div class="menu-holder flex border-t border-t-almond-200 bg-white shadow-xl relative z-40">
     <menu class="flex gap-6 items-center justify-between max-w-96 w-full mx-auto px-6">
       <li>
         <NuxtLink :to="`/event/${uuid}/`" class="py-3 px-4 flex items-center justify-center group relative" active-class="active" @click="dismissUploadNotification">

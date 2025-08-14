@@ -1,12 +1,16 @@
 <template>
   <div class="relative overflow-hidden">
       <img
+        ref="imageRef"
         :src="picture.url"
-        class="w-full aspect-square object-cover transition-all duration-700 scale-105 opacity-0
-        data-[loaded=true]:scale-100 data-[loaded=true]:opacity-100"
+        :class="[
+          'w-full aspect-square object-cover',
+          isLoaded ? 'scale-100 opacity-100' : 'scale-105 opacity-0',
+          shouldAnimate ? 'transition-all duration-700' : ''
+        ]"
         
         :data-loaded="isLoaded"
-        @load="isLoaded = true"
+        @load="handleImageLoad"
       >
     <ClientOnly>
       <button v-if="displayFavoriteToggle" class="absolute right-2 bottom-2 group transition-transform active:scale-95" :aria-pressed="isInFavorite(picture.id)" type="button" @click="toggleFavorite(picture.id)">
@@ -18,7 +22,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import type { SerializeObject } from 'nitropack'
 import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/index.get';
 
@@ -30,4 +34,19 @@ const {picture, displayFavoriteToggle = true} = defineProps<{
 const {  isInFavorite, toggleFavorite } = useFavoriteStorage()
 
 const isLoaded = ref(false)
+const shouldAnimate = ref(true)
+const imageRef = ref<HTMLImageElement>()
+
+function handleImageLoad () {
+  isLoaded.value = true
+}
+
+// Check if image is already cached/loaded when component mounts
+onMounted(() => {
+  if (imageRef.value?.complete && imageRef.value?.naturalHeight > 0) {
+    // Image is already loaded (cached), skip animation
+    isLoaded.value = true
+    shouldAnimate.value = false
+  }
+})
 </script>

@@ -1,6 +1,6 @@
 <template>
   <Transition name="reveal" appear>
-    <div v-if="shouldDisplay" class="main fixed inset-0 z-20 flex flex-col items-center justify-center gap-10 px-4">
+    <div v-if="shouldDisplay" class="main fixed inset-0 z-50 flex flex-col items-center justify-center gap-10 px-4">
         <span class="font-logo text-2xl tracking-wide">Uploading your pictures...</span>
         <div class="loader text-almond-300"/>
         <span class="font-bold">Progress: {{ formatedProgressString }}</span>
