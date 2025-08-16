@@ -1,10 +1,10 @@
-import { useDrizzle } from "~~/server/database"
-import type { EventState } from "~~/server/database/schema/event-schema";
-import { eventBucketType, events } from "~~/server/database/schema/event-schema"
-import z from "zod";
-import type { ServerFile } from "nuxt-file-storage";
-import { eq } from "drizzle-orm";
-import { buildCoverImageUrl, getCoverImageFolder } from "~~/server/service/ImageService";
+import type { ServerFile } from 'nuxt-file-storage'
+import type { EventState } from '~~/server/database/schema/event-schema'
+import { eq } from 'drizzle-orm'
+import z from 'zod'
+import { useDrizzle } from '~~/server/database'
+import { eventBucketType, events } from '~~/server/database/schema/event-schema'
+import { buildCoverImageUrl, getCoverImageFolder } from '~~/server/service/ImageService'
 
 const createEventRequestSchema = z.object({
   name: z.string().max(255),
@@ -13,7 +13,7 @@ const createEventRequestSchema = z.object({
   bucketUri: z.string().max(2048).optional(),
   bucketType: z.enum(eventBucketType.enumValues),
   startDate: z.coerce.date(),
-  endDate: z.coerce.date()
+  endDate: z.coerce.date(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -24,14 +24,14 @@ export default defineEventHandler(async (event) => {
   const { name, shortName, image, bucketUri, bucketType, startDate, endDate } = await readValidatedBody(event, body => createEventRequestSchema.parse(body))
 
   const now = new Date()
-  let state: EventState = "draft"
+  let state: EventState = 'draft'
 
   if (startDate >= now) {
     state = 'started'
   }
 
   const [createdEvent] = await db.insert(events).values({
-    name: name,
+    name,
     shortName: shortName ?? name.slice(0, 8),
     bucketUri: bucketUri ?? '', // Actually not used for now as R2 is not implemented yet
     bucketType,
@@ -46,20 +46,19 @@ export default defineEventHandler(async (event) => {
     const savedImageUrl = await saveCoverImage(image, createdEvent.id)
     await db.update(events).set({
       imageUrl: savedImageUrl,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     }).where(eq(events.id, createdEvent.id))
   }
-  
+
   return createdEvent
 })
-
 
 async function saveCoverImage(file: ServerFile, eventId: string) {
   const fileName = await storeFileLocally(
     file,
     eventId,
-    getCoverImageFolder(eventId)
+    getCoverImageFolder(eventId),
   )
 
-  return buildCoverImageUrl(eventId, fileName,)
+  return buildCoverImageUrl(eventId, fileName)
 }

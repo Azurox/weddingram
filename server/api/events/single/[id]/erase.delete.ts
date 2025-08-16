@@ -1,17 +1,16 @@
-import { useDrizzle } from "~~/server/database"
-import { events } from "~~/server/database/schema/event-schema"
-import { eq } from "drizzle-orm"
-import z from "zod"
-
+import { eq } from 'drizzle-orm'
+import z from 'zod'
+import { useDrizzle } from '~~/server/database'
+import { events } from '~~/server/database/schema/event-schema'
 
 const eventIdRouterParam = z.object({
-  id: z.uuid()
+  id: z.uuid(),
 })
 
 export default defineEventHandler(async (event) => {
   await requireUserSession(event)
 
-  const {id: eventId} = await getValidatedRouterParams(event, eventIdRouterParam.parse)
+  const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
 
   const db = useDrizzle()
   await db.delete(events).where(eq(events.id, eventId))

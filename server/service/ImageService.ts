@@ -1,15 +1,15 @@
-export function buildCoverImageUrl(eventId: string,filename: string) {
-    return `/events/${eventId}/cover/${filename}`;
+export function buildCoverImageUrl(eventId: string, filename: string) {
+  return `/events/${eventId}/cover/${filename}`
 }
 
 export function getCoverImageFolder(eventId: string) {
-    return `public/events/${eventId}/cover/`;
+  return `public/events/${eventId}/cover/`
 }
 
 export function getUploadedPictureFolder(eventId: string) {
-    return `public/events/${eventId}/pictures/`;
+  return `public/events/${eventId}/pictures/`
 }
 
 export function buildUploadedPictureUrl(eventId: string, filename: string) {
-    return `/events/${eventId}/pictures/${filename}`;
+  return `/events/${eventId}/pictures/${filename}`
 }

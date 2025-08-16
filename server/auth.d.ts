@@ -1,11 +1,11 @@
 declare module '#auth-utils' {
   interface User {
-    id?: string;
-    isAdmin: boolean;
+    id?: string
+    isAdmin: boolean
   }
 
   interface UserSession {
-    loggedInAt: Date;
+    loggedInAt: Date
   }
 }
 

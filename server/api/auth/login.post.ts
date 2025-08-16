@@ -1,4 +1,4 @@
-import z from "zod"
+import z from 'zod'
 
 const loginRequestSchema = z.object({
   password: z.string().max(255),
@@ -9,9 +9,6 @@ export default defineEventHandler(async (event) => {
 
   const config = useRuntimeConfig(event)
 
-  console.log('Attempting login with password')
-  console.log(config.masterPassword)
-
   if (password !== config.masterPassword) {
     throw createError({
       statusCode: 401,
@@ -19,12 +16,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-
   await setUserSession(event, {
     loggedInAt: new Date(),
     user: {
       isAdmin: true,
-     },
+    },
   })
 
   setResponseStatus(event, 204)

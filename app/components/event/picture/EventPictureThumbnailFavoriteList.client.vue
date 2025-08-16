@@ -1,3 +1,110 @@
+<script lang="ts" setup>
+import type { SerializeObject } from 'nitropack'
+import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/index.get'
+import { useInfiniteScroll } from '@vueuse/core'
+import { computed, ref, watch } from 'vue'
+import UiContainer from '~/components/ui/UiContainer.vue'
+
+const PAGE_SIZE = 20
+const currentPage = ref(1)
+const favoritePictureList = ref<SerializeObject<UploadedPicture>[]>([])
+const hasMore = ref(true)
+const pending = ref(false)
+const instaViewFocusedPictureId = ref<string | null>(null)
+const isFavoriteListDirty = ref(false)
+
+const { uuid } = useRoute().params as { uuid: string }
+const { favorites } = useFavoriteStorage()
+
+const favoriteIds = computed(() =>
+  Object.entries(favorites.value)
+    .filter(([_, isFavorite]) => isFavorite)
+    .map(([id]) => id),
+)
+
+async function fetchFavoritePictures(page: number) {
+  if (favoriteIds.value.length === 0) {
+    favoritePictureList.value = []
+    hasMore.value = false
+    return
+  }
+  pending.value = true
+  const idsForPage = favoriteIds.value.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  if (idsForPage.length === 0) {
+    hasMore.value = false
+    pending.value = false
+    return
+  }
+  const data = await $fetch(`/api/events/single/${uuid}/pictures/batch`, {
+    method: 'get',
+    params: { pictureIds: idsForPage },
+    key: `favorites-page-${page}`,
+    immediate: true,
+  })
+
+  if (data && Array.isArray(data)) {
+    // Clean up localStorage: remove IDs that weren't returned by the backend
+    const returnedIds = data.map(picture => picture.id)
+    const deletedIds = idsForPage.filter(id => !returnedIds.includes(id))
+
+    if (deletedIds.length > 0) {
+      const { removeFavorite } = useFavoriteStorage()
+      deletedIds.forEach(id => removeFavorite(id))
+    }
+
+    if (page === 1) {
+      favoritePictureList.value = data
+    }
+    else {
+      favoritePictureList.value = [...favoritePictureList.value, ...data]
+    }
+    // Check if we have more pages to load based on remaining favorite IDs
+    const totalProcessedIds = page * PAGE_SIZE
+    hasMore.value = totalProcessedIds < favoriteIds.value.length
+  }
+  else {
+    hasMore.value = false
+  }
+  pending.value = false
+}
+
+watch(favorites, async () => {
+  if (instaViewFocusedPictureId.value) {
+    isFavoriteListDirty.value = true
+    return
+  }
+  currentPage.value = 1
+  await fetchFavoritePictures(1)
+}, { deep: true, immediate: true })
+
+useInfiniteScroll(
+  window,
+  async () => {
+    if (!pending.value && hasMore.value) {
+      currentPage.value += 1
+      await fetchFavoritePictures(currentPage.value)
+    }
+  },
+  {
+    distance: 300,
+    canLoadMore: () => hasMore.value && !pending.value,
+  },
+)
+
+function showInstaView(picture: SerializeObject<UploadedPicture>) {
+  instaViewFocusedPictureId.value = picture.id
+}
+
+function hideInstaView() {
+  instaViewFocusedPictureId.value = null
+
+  if (isFavoriteListDirty.value) {
+    currentPage.value = 1
+    fetchFavoritePictures(1)
+    isFavoriteListDirty.value = false
+  }
+}
+</script>
 
 <template>
   <div class="relative">
@@ -22,114 +129,7 @@
     </template>
 
     <Transition name="full-screen-slide" appear>
-        <EventPictureInstaView v-if="favoritePictureList && instaViewFocusedPictureId" :picture-list="favoritePictureList" :initial-picture-id="instaViewFocusedPictureId" :go-back-context="'Favorite'" :has-more="hasMore" :is-loading="pending" @next-page="currentPage++" @close="hideInstaView"/>
+      <EventPictureInstaView v-if="favoritePictureList && instaViewFocusedPictureId" :picture-list="favoritePictureList" :initial-picture-id="instaViewFocusedPictureId" go-back-context="Favorite" :has-more="hasMore" :is-loading="pending" @next-page="currentPage++" @close="hideInstaView" />
     </Transition>
   </div>
 </template>
-
-<script lang="ts" setup>
-
-import { ref, computed, watch } from 'vue';
-import { useInfiniteScroll } from '@vueuse/core';
-import UiContainer from '~/components/ui/UiContainer.vue';
-import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/index.get';
-import type { SerializeObject } from 'nitropack';
-
-const PAGE_SIZE = 20;
-const currentPage = ref(1);
-const favoritePictureList = ref<SerializeObject<UploadedPicture>[]>([]);
-const hasMore = ref(true);
-const pending = ref(false);
-const instaViewFocusedPictureId = ref<string | null>(null);
-const isFavoriteListDirty = ref(false);
-
-const { uuid } = useRoute().params as { uuid: string };
-const { favorites } = useFavoriteStorage();
-
-const favoriteIds = computed(() =>
-  Object.entries(favorites.value)
-    .filter(([_, isFavorite]) => isFavorite)
-    .map(([id]) => id)
-);
-
-async function fetchFavoritePictures(page: number) {
-  if (favoriteIds.value.length === 0) {
-    favoritePictureList.value = [];
-    hasMore.value = false;
-    return;
-  }
-  pending.value = true;
-  const idsForPage = favoriteIds.value.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  if (idsForPage.length === 0) {
-    hasMore.value = false;
-    pending.value = false;
-    return;
-  }
-  const data = await $fetch(`/api/events/single/${uuid}/pictures/batch`, {
-    method: 'get',
-    params: { pictureIds: idsForPage },
-    key: `favorites-page-${page}`,
-    immediate: true,
-  });
-
-  if (data && Array.isArray(data)) {
-    // Clean up localStorage: remove IDs that weren't returned by the backend
-    const returnedIds = data.map(picture => picture.id);
-    const deletedIds = idsForPage.filter(id => !returnedIds.includes(id));
-    
-    if (deletedIds.length > 0) {
-      const { removeFavorite } = useFavoriteStorage();
-      deletedIds.forEach(id => removeFavorite(id));
-    }
-    
-    if (page === 1) {
-      favoritePictureList.value = data;
-    } else {
-      favoritePictureList.value = [...favoritePictureList.value, ...data];
-    }
-    // Check if we have more pages to load based on remaining favorite IDs
-    const totalProcessedIds = page * PAGE_SIZE;
-    hasMore.value = totalProcessedIds < favoriteIds.value.length;
-  } else {
-    hasMore.value = false;
-  }
-  pending.value = false;
-}
-
-watch(favorites, async () => {
-  if(instaViewFocusedPictureId.value) {
-    isFavoriteListDirty.value = true;
-    return;
-  }
-  currentPage.value = 1;
-  await fetchFavoritePictures(1);
-}, { deep: true, immediate: true });
-
-useInfiniteScroll(
-  window,
-  async () => {
-    if (!pending.value && hasMore.value) {
-      currentPage.value += 1;
-      await fetchFavoritePictures(currentPage.value);
-    }
-  },
-  {
-    distance: 300,
-    canLoadMore: () => hasMore.value && !pending.value,
-  }
-);
-
-function showInstaView(picture: SerializeObject<UploadedPicture>) {
-  instaViewFocusedPictureId.value = picture.id
-}
-
-function hideInstaView() {
-  instaViewFocusedPictureId.value = null
-
-  if(isFavoriteListDirty.value) {
-    currentPage.value = 1;
-    fetchFavoritePictures(1);
-    isFavoriteListDirty.value = false;
-  }
-}
-</script>

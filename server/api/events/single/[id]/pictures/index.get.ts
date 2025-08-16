@@ -1,12 +1,12 @@
-import z from "zod"
-import { useDrizzle } from "~~/server/database"
-import { pictures } from "~~/server/database/schema/picture-schema"
-import { guests } from "~~/server/database/schema/guest-schema"
-import { getEventById } from "~~/server/service/EventService"
-import { eq, desc, asc, sql } from "drizzle-orm"
+import { asc, desc, eq, sql } from 'drizzle-orm'
+import z from 'zod'
+import { useDrizzle } from '~~/server/database'
+import { guests } from '~~/server/database/schema/guest-schema'
+import { pictures } from '~~/server/database/schema/picture-schema'
+import { getEventById } from '~~/server/service/EventService'
 
 const eventIdRouterParam = z.object({
-  id: z.uuid()
+  id: z.uuid(),
 })
 
 const querySchema = z.object({
@@ -16,13 +16,13 @@ const querySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
 
-export type UploadedPicture = {
-  id: string;
-  url: string;
-  capturedAt: Date;
-  createdAt: Date;
-  guestId: string;
-  guestNickname: string | null;
+export interface UploadedPicture {
+  id: string
+  url: string
+  capturedAt: Date
+  createdAt: Date
+  guestId: string
+  guestNickname: string | null
 }
 
 export default defineEventHandler(async (event) => {

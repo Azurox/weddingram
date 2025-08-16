@@ -1,4 +1,5 @@
-import tailwindcss from "@tailwindcss/vite";
+import process from 'node:process'
+import tailwindcss from '@tailwindcss/vite'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -12,7 +13,7 @@ export default defineNuxtConfig({
     'nuxt-auth-utils',
     'nuxt-file-storage',
     '@vueuse/nuxt',
-    '@nuxt/fonts'
+    '@nuxt/fonts',
   ],
   css: ['~/assets/css/main.css'],
   vite: {
@@ -24,7 +25,7 @@ export default defineNuxtConfig({
     databaseUrl: '',
     masterPassword: process.env.WEDDING_MASTER_PASSWORD || '',
   },
-   fileStorage: {
-     mount: process.env.WEDDING_STORAGE_MOUNT || ''
-   }
+  fileStorage: {
+    mount: process.env.WEDDING_STORAGE_MOUNT || '',
+  },
 })

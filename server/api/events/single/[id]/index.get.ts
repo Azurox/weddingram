@@ -1,16 +1,16 @@
-import { useDrizzle } from "~~/server/database"
-import { events } from "~~/server/database/schema/event-schema"
-import { eq } from "drizzle-orm"
-import z from "zod"
+import { eq } from 'drizzle-orm'
+import z from 'zod'
+import { useDrizzle } from '~~/server/database'
+import { events } from '~~/server/database/schema/event-schema'
 
 const eventIdRouterParam = z.object({
-  id: z.uuid()
+  id: z.uuid(),
 })
 
 export default defineEventHandler(async (event) => {
   const db = useDrizzle()
-  
-  const {id: eventId} = await getValidatedRouterParams(event, eventIdRouterParam.parse)
+
+  const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
 
   const [foundEvent] = await db
     .select({
@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
   if (!foundEvent) {
     throw createError({
       statusCode: 404,
-      statusMessage: "Event not found"
+      statusMessage: 'Event not found',
     })
   }
 

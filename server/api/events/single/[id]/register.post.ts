@@ -1,10 +1,9 @@
-import z from "zod"
-import { useDrizzle } from "~~/server/database"
-import { guests } from "~~/server/database/schema/guest-schema"
-
+import z from 'zod'
+import { useDrizzle } from '~~/server/database'
+import { guests } from '~~/server/database/schema/guest-schema'
 
 const eventIdRouterParam = z.object({
-  id: z.uuid()
+  id: z.uuid(),
 })
 
 const registerEventRequestSchema = z.object({
@@ -12,8 +11,7 @@ const registerEventRequestSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-
-  const {id: eventId} = await getValidatedRouterParams(event, eventIdRouterParam.parse)
+  const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
   const { nickname } = await readValidatedBody(event, body => registerEventRequestSchema.parse(body))
 
   const [guest] = await useDrizzle().insert(guests).values({

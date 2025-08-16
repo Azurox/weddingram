@@ -47,7 +47,5 @@
     "postcss"
   ],
   "files.exclude": {
-  },
-  "discord.enabled": false,
-  "oxc.enable": true
+  }
 }

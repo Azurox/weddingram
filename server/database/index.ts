@@ -12,7 +12,7 @@ const schema = {
   guests,
   guestsRelations,
   pictures,
-  picturesRelations
+  picturesRelations,
 } as const
 
 type Schema = typeof schema

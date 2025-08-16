@@ -1,28 +1,27 @@
-import z from "zod"
-import { useDrizzle } from "~~/server/database"
-import { pictures } from "~~/server/database/schema/picture-schema"
-import { guests } from "~~/server/database/schema/guest-schema"
-import { getEventById } from "~~/server/service/EventService"
-import { eq, and, inArray } from "drizzle-orm"
-
+import { and, eq, inArray } from 'drizzle-orm'
+import z from 'zod'
+import { useDrizzle } from '~~/server/database'
+import { guests } from '~~/server/database/schema/guest-schema'
+import { pictures } from '~~/server/database/schema/picture-schema'
+import { getEventById } from '~~/server/service/EventService'
 
 const eventIdRouterParam = z.object({
-  id: z.uuid()
+  id: z.uuid(),
 })
 
 const bodySchema = z.object({
   pictureIds: z.union([
     z.uuid(),
-    z.array(z.string())
-  ]).transform((val) => Array.isArray(val) ? val : [val]).pipe(
-    z.array(z.uuid())
+    z.array(z.string()),
+  ]).transform(val => Array.isArray(val) ? val : [val]).pipe(
+    z.array(z.uuid()),
   ),
 })
 
 export default defineEventHandler(async (event) => {
-  const {id: eventId} = await getValidatedRouterParams(event, eventIdRouterParam.parse)
+  const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
   const { pictureIds } = await getValidatedQuery(event, bodySchema.parse)
-  
+
   // Validate the request body
 
   // Verify event exists
@@ -51,10 +50,9 @@ export default defineEventHandler(async (event) => {
     .where(
       and(
         eq(pictures.eventId, eventId),
-        inArray(pictures.id, pictureIds)
-      )
+        inArray(pictures.id, pictureIds),
+      ),
     )
-
 
   return picturesList
 })

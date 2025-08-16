@@ -9,8 +9,8 @@
 
 <style scoped>
 main {
-  background: radial-gradient(900px 600px at 85% -10%, rgba(201, 167, 76, 0.10), transparent 55%),
-    radial-gradient(900px 700px at -10% 105%, rgba(201, 167, 76, 0.06), transparent 60%),
-    #fbfaf7
+  background:
+    radial-gradient(900px 600px at 85% -10%, rgba(201, 167, 76, 0.1), transparent 55%),
+    radial-gradient(900px 700px at -10% 105%, rgba(201, 167, 76, 0.06), transparent 60%), #fbfaf7;
 }
 </style>

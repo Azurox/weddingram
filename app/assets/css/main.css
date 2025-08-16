@@ -1,36 +1,35 @@
-@import "tailwindcss";
-@import "./utils/transitions.css";
+@import 'tailwindcss';
+@import './utils/transitions.css';
 
 @theme {
-    --color-almond-50: oklch(97.4% 0.008 48.76);
-    --color-almond-100: oklch(94.87% 0.015 61.36);
-    --color-almond-200: oklch(89.33% 0.035 60.4);
-    --color-almond-300: oklch(79.76% 0.08 65.63);
-    --color-almond-400: oklch(71.06% 0.072 65.53);
-    --color-almond-500: oklch(61.44% 0.062 64.53);
-    --color-almond-600: oklch(51.97% 0.053 66.22);
-    --color-almond-700: oklch(42.55% 0.043 66.22);
-    --color-almond-800: oklch(32.96% 0.033 66.26);
-    --color-almond-900: oklch(23.55% 0.024 66.23);
-    --color-almond-950: oklch(17.98% 0.018 66.39);
+  --color-almond-50: oklch(97.4% 0.008 48.76);
+  --color-almond-100: oklch(94.87% 0.015 61.36);
+  --color-almond-200: oklch(89.33% 0.035 60.4);
+  --color-almond-300: oklch(79.76% 0.08 65.63);
+  --color-almond-400: oklch(71.06% 0.072 65.53);
+  --color-almond-500: oklch(61.44% 0.062 64.53);
+  --color-almond-600: oklch(51.97% 0.053 66.22);
+  --color-almond-700: oklch(42.55% 0.043 66.22);
+  --color-almond-800: oklch(32.96% 0.033 66.26);
+  --color-almond-900: oklch(23.55% 0.024 66.23);
+  --color-almond-950: oklch(17.98% 0.018 66.39);
 
-    --color-merino-50: #f9f6f3;
-    --color-merino-100: #f2ece3;
-    --color-merino-200: #e3d6c5;
-    --color-merino-300: #d2ba9f;
-    --color-merino-400: #be9a79;
-    --color-merino-500: #b1825e;
-    --color-merino-600: #a47052;
-    --color-merino-700: #885b46;
-    --color-merino-800: #6f4b3d;
-    --color-merino-900: #5a3e34;
-    --color-merino-950: #30201a;
+  --color-merino-50: #f9f6f3;
+  --color-merino-100: #f2ece3;
+  --color-merino-200: #e3d6c5;
+  --color-merino-300: #d2ba9f;
+  --color-merino-400: #be9a79;
+  --color-merino-500: #b1825e;
+  --color-merino-600: #a47052;
+  --color-merino-700: #885b46;
+  --color-merino-800: #6f4b3d;
+  --color-merino-900: #5a3e34;
+  --color-merino-950: #30201a;
 
-    --font-logo: "Playfair Display";
-    --font-body: "Inter", sans-serif;
+  --font-logo: 'Playfair Display';
+  --font-body: 'Inter', sans-serif;
 }
 
-
 body:has(aside) {
-    overflow: hidden;
+  overflow: hidden;
 }
