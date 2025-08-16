@@ -1,0 +1,21 @@
+.full-screen-slide-enter-active,
+.full-screen-slide-leave-active {
+  transition: 
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.full-screen-slide-enter-from {
+  transform: translateX(100%);
+}
+
+.full-screen-slide-enter-to {
+  transform: translateX(0);
+}
+
+.full-screen-slide-leave-from {
+  transform: translateX(0);
+}
+
+.full-screen-slide-leave-to {
+  transform: translateX(100%);
+}

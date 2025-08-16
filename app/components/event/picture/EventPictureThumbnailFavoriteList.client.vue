@@ -15,9 +15,15 @@
           :key="picture.id"
           :picture="picture"
           :display-favorite-toggle="false"
+          record-long-press
+          @select="showInstaView(picture)"
         />
       </UiContainer>
     </template>
+
+    <Transition name="full-screen-slide" appear>
+        <EventPictureInstaView v-if="favoritePictureList && instaViewFocusedPictureId" :picture-list="favoritePictureList" :initial-picture-id="instaViewFocusedPictureId" :go-back-context="'Favorite'" :has-more="hasMore" :is-loading="pending" @next-page="currentPage++" @close="hideInstaView"/>
+    </Transition>
   </div>
 </template>
 
@@ -34,6 +40,8 @@ const currentPage = ref(1);
 const favoritePictureList = ref<SerializeObject<UploadedPicture>[]>([]);
 const hasMore = ref(true);
 const pending = ref(false);
+const instaViewFocusedPictureId = ref<string | null>(null);
+const isFavoriteListDirty = ref(false);
 
 const { uuid } = useRoute().params as { uuid: string };
 const { favorites } = useFavoriteStorage();
@@ -57,15 +65,16 @@ async function fetchFavoritePictures(page: number) {
     pending.value = false;
     return;
   }
-  const { data } = await useFetch(`/api/events/single/${uuid}/pictures/batch`, {
+  const data = await $fetch(`/api/events/single/${uuid}/pictures/batch`, {
     method: 'get',
     params: { pictureIds: idsForPage },
     key: `favorites-page-${page}`,
     immediate: true,
   });
-  if (data.value && Array.isArray(data.value)) {
+
+  if (data && Array.isArray(data)) {
     // Clean up localStorage: remove IDs that weren't returned by the backend
-    const returnedIds = data.value.map(picture => picture.id);
+    const returnedIds = data.map(picture => picture.id);
     const deletedIds = idsForPage.filter(id => !returnedIds.includes(id));
     
     if (deletedIds.length > 0) {
@@ -74,9 +83,9 @@ async function fetchFavoritePictures(page: number) {
     }
     
     if (page === 1) {
-      favoritePictureList.value = data.value;
+      favoritePictureList.value = data;
     } else {
-      favoritePictureList.value = [...favoritePictureList.value, ...data.value];
+      favoritePictureList.value = [...favoritePictureList.value, ...data];
     }
     // Check if we have more pages to load based on remaining favorite IDs
     const totalProcessedIds = page * PAGE_SIZE;
@@ -88,6 +97,10 @@ async function fetchFavoritePictures(page: number) {
 }
 
 watch(favorites, async () => {
+  if(instaViewFocusedPictureId.value) {
+    isFavoriteListDirty.value = true;
+    return;
+  }
   currentPage.value = 1;
   await fetchFavoritePictures(1);
 }, { deep: true, immediate: true });
@@ -105,4 +118,18 @@ useInfiniteScroll(
     canLoadMore: () => hasMore.value && !pending.value,
   }
 );
+
+function showInstaView(picture: SerializeObject<UploadedPicture>) {
+  instaViewFocusedPictureId.value = picture.id
+}
+
+function hideInstaView() {
+  instaViewFocusedPictureId.value = null
+
+  if(isFavoriteListDirty.value) {
+    currentPage.value = 1;
+    fetchFavoritePictures(1);
+    isFavoriteListDirty.value = false;
+  }
+}
 </script>

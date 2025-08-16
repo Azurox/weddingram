@@ -50,6 +50,7 @@ fill-rule="evenodd"
       </form>
     </UiContainer>
 
+    <Transition name="slide-in">
     <UiContainer
 v-if="selectedPictures.size > 0"
       class="fixed right-10 left-10 bottom-16 z-30 pointer-events-none flex">
@@ -76,6 +77,7 @@ stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
         </div>
       </div>
     </UiContainer>
+  </Transition>
   </div>
 </template>
 
@@ -108,3 +110,32 @@ const handleDelete = async () => {
   }
 };
 </script>
+
+<style scoped>
+.slide-in-enter-active,
+.slide-in-leave-active {
+  transition: 
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-in-enter-from {
+  opacity: 0;
+  transform: translateX(40px);
+}
+
+.slide-in-enter-to {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.slide-in-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.slide-in-leave-to {
+  opacity: 0;
+  transform: translateX(40px);
+}
+</style>

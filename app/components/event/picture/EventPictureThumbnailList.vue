@@ -18,10 +18,14 @@
           </select>
         </UiContainer>
       </div>
-      <UiContainer  class="grid grid-cols-3 gap">
-        <event-picture-thumbnail v-for="thumbnail in pictureList" :key="thumbnail.id" :picture="thumbnail" />
+      <UiContainer class="grid grid-cols-3 gap">
+        <event-picture-thumbnail v-for="thumbnail in pictureList" :key="thumbnail.id" :picture="thumbnail" @select="showInstaView(thumbnail)" />
       </UiContainer>
-    </template>
+
+      <Transition name="full-screen-slide" appear>
+        <EventPictureInstaView v-if="pictureList && instaViewFocusedPictureId" :picture-list="pictureList" :initial-picture-id="instaViewFocusedPictureId" :go-back-context="'Home'" :has-more="hasMore" :is-loading="pending" @next-page="currentPage++" @close="hideInstaView"/>
+      </Transition>
+      </template>
   </div>
 </template>
 
@@ -36,6 +40,7 @@ const { uuid } = useRoute().params as { uuid: string };
 const pictureList = ref<SerializeObject<UploadedPicture>[]>()
 const selectedSortby = ref<AvailableSortby>('recent')
 const currentPage = ref(1)
+const instaViewFocusedPictureId = ref<string | null>(null)
 
 const sortByMapping = computed(() => {
   switch (selectedSortby.value) {
@@ -56,6 +61,14 @@ const hasMore = computed(() => {
   return thumbnails.value?.pagination.hasNextPage ?? false
 })
 
+
+function showInstaView(picture: SerializeObject<UploadedPicture>) {
+  instaViewFocusedPictureId.value = picture.id
+}
+
+function hideInstaView() {
+  instaViewFocusedPictureId.value = null
+}
 
 const { data: thumbnails, pending } = await useFetch(`/api/events/single/${uuid}/pictures`, {
   method: 'GET',

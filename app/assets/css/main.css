@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./utils/transitions.css";
 
 @theme {
     --color-almond-50: oklch(97.4% 0.008 48.76);
@@ -27,4 +28,9 @@
 
     --font-logo: "Playfair Display";
     --font-body: "Inter", sans-serif;
+}
+
+
+body:has(aside) {
+    overflow: hidden;
 }
