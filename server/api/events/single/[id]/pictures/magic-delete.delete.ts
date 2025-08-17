@@ -58,7 +58,6 @@ export default defineEventHandler(async (event) => {
       .where(
         and(
           inArray(pictures.magicDeleteId, parsedRequest.magicDeleteIds),
-          eq(pictures.guestId, session.user.id),
           eq(pictures.eventId, eventId),
         ),
       )
@@ -76,7 +75,6 @@ export default defineEventHandler(async (event) => {
       .where(
         and(
           inArray(pictures.magicDeleteId, parsedRequest.magicDeleteIds),
-          eq(pictures.guestId, session.user.id),
           eq(pictures.eventId, eventId),
         ),
       )
