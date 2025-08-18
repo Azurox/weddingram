@@ -5,7 +5,7 @@ definePageMeta({
 })
 
 const { uuid } = useRoute().params as { uuid: string }
-const { data: event } = await useFetch(`/api/events/single/${uuid}`)
+const { data: event } = await useFetch(`/api/events/single/${uuid}`, { key: `event:${uuid}:details` })
 </script>
 
 <template>
@@ -23,8 +23,14 @@ const { data: event } = await useFetch(`/api/events/single/${uuid}`)
             </p>
           </div>
         </div>
-        <div class="text-almond-700 font-medium text-xs">
-          0 photos
+        <div v-if="event" class="text-almond-700 font-medium text-xs">
+          {{ event.pictureCount }}
+          <template v-if="event.pictureCount && event.pictureCount > 1">
+            pictures
+          </template>
+          <template v-else>
+            picture
+          </template>
         </div>
       </UiContainer>
     </header>

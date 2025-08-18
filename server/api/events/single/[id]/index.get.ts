@@ -1,27 +1,20 @@
-import { eq } from 'drizzle-orm'
 import z from 'zod'
-import { useDrizzle } from '~~/server/database'
-import { events } from '~~/server/database/schema/event-schema'
+import { getEventById, getEventPictureCount, mapEventToPublic } from '~~/server/service/EventService'
 
 const eventIdRouterParam = z.object({
   id: z.uuid(),
 })
 
+// TODO should be protected by auth
 export default defineEventHandler(async (event) => {
-  const db = useDrizzle()
+  const _session = await requireUserSession(event)
 
   const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
 
-  const [foundEvent] = await db
-    .select({
-      id: events.id,
-      name: events.name,
-      shortName: events.shortName,
-      imageUrl: events.imageUrl,
-    })
-    .from(events)
-    .where(eq(events.id, eventId))
-    .limit(1)
+  const [foundEvent, picturesCount] = await Promise.all([
+    getEventById(eventId),
+    getEventPictureCount(eventId),
+  ])
 
   if (!foundEvent) {
     throw createError({
@@ -30,5 +23,5 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  return foundEvent
+  return mapEventToPublic(foundEvent, picturesCount)
 })

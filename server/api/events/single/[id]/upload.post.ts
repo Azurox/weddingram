@@ -5,7 +5,7 @@ import ExifReader from 'exifreader'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { pictures } from '~~/server/database/schema/picture-schema'
-import { getEventById } from '~~/server/service/EventService'
+import { clearEventPictureCountCache, getEventById } from '~~/server/service/EventService'
 import { buildUploadedPictureUrl, getUploadedPictureFolder } from '~~/server/service/ImageService'
 
 const eventIdRouterParam = z.object({
@@ -105,6 +105,8 @@ export default defineEventHandler(async (event) => {
       id: pictures.id,
       url: pictures.url,
     })
+
+    await clearEventPictureCountCache(eventId)
 
     return insertedPictures
   }

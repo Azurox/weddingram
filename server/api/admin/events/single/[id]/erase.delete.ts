@@ -7,6 +7,7 @@ const eventIdRouterParam = z.object({
   id: z.uuid(),
 })
 
+// TODO should be protected by auth admin only
 export default defineEventHandler(async (event) => {
   await requireUserSession(event)
 

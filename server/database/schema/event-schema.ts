@@ -14,8 +14,9 @@ export const events = pgTable('events', {
   state: eventState('state').notNull().default('draft').notNull(),
   imageUrl: text('image_url'),
   shortName: varchar('short_name', { length: 8 }).notNull(),
-  startDate: timestamp('start_date').notNull(),
-  endDate: timestamp('end_date').notNull(),
+  startDate: timestamp('start_date').notNull(), // When guest can start to upload pictures
+  endDate: timestamp('end_date').notNull(), // When guest can no longer upload pictures
+  closeDate: timestamp('close_date').notNull(), // When the event should be closed and all pictures removed
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   bucketType: eventBucketType('bucket_type').notNull().default('R2').notNull(),

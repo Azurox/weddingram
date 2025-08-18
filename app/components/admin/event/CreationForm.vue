@@ -19,7 +19,7 @@ const bucketTypeOptions = [
 ] satisfies { value: EventBucketType, label: string, disabled: boolean }[]
 
 async function createEvent() {
-  const _result = await $fetch('/api/events/create', {
+  const _result = await $fetch('/api/admin/events/create', {
     method: 'POST',
     body: {
       name: form.name,

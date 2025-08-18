@@ -4,7 +4,7 @@ definePageMeta({
 })
 
 const creationDialog = useTemplateRef('creationDialog')
-const { data: events } = await useFetch('/api/events')
+const { data: events } = await useFetch('/api/admin/events')
 
 function toggleCreationDialog() {
   if (creationDialog.value?.open) {

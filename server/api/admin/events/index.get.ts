@@ -1,5 +1,6 @@
 import { useDrizzle } from '~~/server/database'
 
+// TODO should be protected by auth admin only
 export default defineEventHandler(async (event) => {
   await requireUserSession(event)
 

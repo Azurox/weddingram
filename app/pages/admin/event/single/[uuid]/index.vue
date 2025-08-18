@@ -4,7 +4,7 @@ definePageMeta({
 })
 
 const { uuid } = useRoute().params as { uuid: string }
-const { data: event } = await useFetch(`/api/events/single/${uuid}`)
+const { data: event } = await useFetch(`/api/admin/events/single/${uuid}`)
 const isLoadingDelete = ref(false)
 
 const url = useRequestURL()
@@ -15,7 +15,7 @@ const eventUrl = computed(() => {
 async function deleteEvent() {
   isLoadingDelete.value = true
   try {
-    await $fetch(`/api/events/single/${uuid}/erase`, {
+    await $fetch(`/api/admin/events/single/${uuid}/erase`, {
       method: 'DELETE',
     })
   }

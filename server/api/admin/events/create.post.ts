@@ -16,6 +16,7 @@ const createEventRequestSchema = z.object({
   endDate: z.coerce.date(),
 })
 
+// TODO should be protected by auth admin only
 export default defineEventHandler(async (event) => {
   await requireUserSession(event)
 
@@ -30,6 +31,10 @@ export default defineEventHandler(async (event) => {
     state = 'started'
   }
 
+  // 3 month from now
+  const closeDate = new Date()
+  closeDate.setMonth(closeDate.getMonth() + 3)
+
   const [createdEvent] = await db.insert(events).values({
     name,
     shortName: shortName ?? name.slice(0, 8),
@@ -38,6 +43,7 @@ export default defineEventHandler(async (event) => {
     state,
     startDate,
     endDate,
+    closeDate,
   }).returning({
     id: events.id,
   })

@@ -4,6 +4,9 @@ definePageMeta({
   layout: 'application',
 })
 
+const { uuid } = useRoute().params as { uuid: string }
+const { data: event } = await useFetch(`/api/events/single/${uuid}`, { key: `event:${uuid}:details` })
+
 const { isUploadCompleted } = useGlobalPictureUploader()
 </script>
 
@@ -46,7 +49,10 @@ const { isUploadCompleted } = useGlobalPictureUploader()
           <ul class="list-disc pl-6 flex flex-col gap-1 text-sm text-almond-700">
             <li>Every participants can see and download picture uploaded.</li>
             <li>Picture will be sorted by capture date.</li>
-            <li>You can upload picture until {TODO}</li>
+            <li v-if="event?.endDate">
+              You can upload picture until
+              <NuxtTime :datetime="event?.endDate" date-style="short" />
+            </li>
           </ul>
         </div>
       </UiContainer>
