@@ -27,6 +27,7 @@ export function mapEventToPublic(event: NonNullable<Awaited<ReturnType<typeof ge
     endDate: event.endDate,
     imageUrl: event.imageUrl,
     pictureCount,
+    eventUrl: getEventUrl(event.id),
   }
 }
 
@@ -51,4 +52,9 @@ export const getEventPictureCount = defineCachedFunction(async (eventId: string)
 
 export async function clearEventPictureCountCache(eventId: string) {
   await useStorage('cache').removeItem(`nitro:functions:getPictureCount:event:${eventId}.json`)
+}
+
+export function getEventUrl(eventId: string) {
+  const applicationDomain = useRuntimeConfig().applicationDomain
+  return `${applicationDomain}/event/${eventId}`
 }

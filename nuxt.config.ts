@@ -24,6 +24,11 @@ export default defineNuxtConfig({
   runtimeConfig: {
     databaseUrl: '',
     masterPassword: process.env.WEDDING_MASTER_PASSWORD || '',
+    session: {
+      maxAge: 60 * 60 * 24 * 7 * 4 * 3, // 3 months
+      password: '',
+    },
+    applicationDomain: process.env.WEDDING_APPLICATION_DOMAIN || 'http://localhost:3000',
   },
   fileStorage: {
     mount: process.env.WEDDING_STORAGE_MOUNT || '',
