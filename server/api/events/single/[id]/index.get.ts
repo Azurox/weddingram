@@ -5,7 +5,6 @@ const eventIdRouterParam = z.object({
   id: z.uuid(),
 })
 
-// TODO should be protected by auth
 export default defineEventHandler(async (event) => {
   const _session = await requireUserSession(event)
 
