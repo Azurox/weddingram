@@ -1,12 +1,7 @@
 import type { AvailableStorageType } from '../database/schema/event-schema'
 
-export function buildCoverImageUrl(storageType: AvailableStorageType, eventId: string, filename: string) {
-  if (storageType === 'filesystem') {
-    return `/events/${eventId}/cover/${filename}`
-  }
-  else {
-    return new URL(filename, useRuntimeConfig().R2EnpointS3).toString()
-  }
+export function buildFileStorageCoverUrl(eventId: string, filename: string) {
+  return `/events/${eventId}/cover/${filename}`
 }
 
 export function getCoverImageFolder(storageType: AvailableStorageType, eventId: string) {

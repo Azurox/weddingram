@@ -24,7 +24,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     databaseUrl: '',
     masterPassword: process.env.WEDDING_MASTER_PASSWORD || '',
-    R2EnpointS3: '',
+    R2EndpointS3: '',
     R2PublicUrl: '',
     R2AccessKeyId: '',
     R2SecretAccessKey: '',

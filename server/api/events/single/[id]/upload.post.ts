@@ -7,7 +7,7 @@ import { useDrizzle } from '~~/server/database'
 import { pictures } from '~~/server/database/schema/picture-schema'
 import { clearEventPictureCountCache, getEventById } from '~~/server/service/EventService'
 import { buildUploadedPictureUrl, getUploadedPictureFolder } from '~~/server/service/ImageService'
-import { persistPublicFile } from '~~/server/service/R2Service'
+import { persistPublicPictureFile } from '~~/server/service/R2Service'
 
 const eventIdRouterParam = z.object({
   id: z.uuid(),
@@ -132,7 +132,7 @@ async function savePictureInBucket(eventId: string, pictureId: string, file: Ser
   else {
     const extension = file.name.split('.').pop() || 'jpg'
     const builtFileName = `${pictureId}.${extension}`
-    const url = await persistPublicFile(buildUploadedPictureUrl(eventId, builtFileName), file, {
+    const url = await persistPublicPictureFile(buildUploadedPictureUrl(eventId, builtFileName), file, {
       eventId,
       guestId,
     })

@@ -5,16 +5,14 @@ import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3
 function createS3Client() {
   const config = useRuntimeConfig()
 
-  const S3 = new S3Client({
+  return new S3Client({
     region: 'auto',
-    endpoint: config.R2EnpointS3,
+    endpoint: config.R2EndpointS3,
     credentials: {
       accessKeyId: config.R2AccessKeyId,
       secretAccessKey: config.R2SecretAccessKey,
     },
   })
-
-  return S3
 }
 
 export function buildPublicUrl(r2FilePath: string) {
@@ -23,7 +21,7 @@ export function buildPublicUrl(r2FilePath: string) {
   return mergedUrl.toString()
 }
 
-export async function persistPublicFile(name: string, file: ServerFile, metadata: Record<string, string> = {}) {
+export async function persistPublicPictureFile(name: string, file: ServerFile, metadata: Record<string, string> = {}) {
   const S3 = createS3Client()
 
   await S3.send(new PutObjectCommand({

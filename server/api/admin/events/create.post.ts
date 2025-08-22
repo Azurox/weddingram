@@ -1,11 +1,11 @@
 import type { ServerFile } from 'nuxt-file-storage'
 import type { AvailableStorageType, EventState } from '~~/server/database/schema/event-schema'
 import { eq } from 'drizzle-orm'
-import z, { url } from 'zod'
+import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { eventBucketType, events } from '~~/server/database/schema/event-schema'
-import { buildCoverImageUrl, getCoverImageFolder } from '~~/server/service/ImageService'
-import { persistPublicFile } from '~~/server/service/R2Service'
+import { buildFileStorageCoverUrl, getCoverImageFolder } from '~~/server/service/ImageService'
+import { persistPublicPictureFile } from '~~/server/service/R2Service'
 
 const createEventRequestSchema = z.object({
   name: z.string().max(255),
@@ -64,20 +64,21 @@ export default defineEventHandler(async (event) => {
 
 async function saveCoverImage(storageType: AvailableStorageType, file: ServerFile, eventId: string) {
   const folder = getCoverImageFolder(storageType, eventId)
-  let fileName: string | undefined
 
   if (storageType === 'filesystem') {
-    fileName = await storeFileLocally(
+    const filename = await storeFileLocally(
       file,
       eventId,
       getCoverImageFolder('filesystem', eventId),
     )
+
+    return buildFileStorageCoverUrl(eventId, filename)
   }
   else {
-    fileName = await persistPublicFile(`${folder}${file.name}`, file, {
+    const coverUrl = await persistPublicPictureFile(`${folder}${file.name}`, file, {
       eventId,
     })
-  }
 
-  return buildCoverImageUrl(storageType, eventId, fileName)
+    return coverUrl
+  }
 }

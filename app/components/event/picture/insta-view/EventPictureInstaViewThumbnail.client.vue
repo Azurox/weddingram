@@ -11,11 +11,17 @@ const { picture } = defineProps<{
 const { isInFavorite, toggleFavorite } = useFavoriteStorage()
 
 async function downloadPicture() {
-  const fetchedPicture = await fetch(picture.url)
-  const blob = await fetchedPicture.blob()
+  try {
+    const fetchedPicture = await fetch(picture.url)
+    const blob = await fetchedPicture.blob()
 
-  const extractedFilename = picture.url.split('/').pop() || 'downloaded_picture.jpg'
-  downloadAsBlob(blob, extractedFilename)
+    const extractedFilename = picture.url.split('/').pop() || 'downloaded_picture.jpg'
+    downloadAsBlob(blob, extractedFilename)
+  }
+  catch (error) {
+    // TODO :  better error handling
+    console.error('Failed to download picture:', error)
+  }
 }
 </script>
 
