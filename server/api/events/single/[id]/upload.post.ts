@@ -7,6 +7,7 @@ import { useDrizzle } from '~~/server/database'
 import { pictures } from '~~/server/database/schema/picture-schema'
 import { clearEventPictureCountCache, getEventById } from '~~/server/service/EventService'
 import { buildUploadedPictureUrl, getUploadedPictureFolder } from '~~/server/service/ImageService'
+import { persistPublicFile } from '~~/server/service/R2Service'
 
 const eventIdRouterParam = z.object({
   id: z.uuid(),
@@ -72,7 +73,7 @@ export default defineEventHandler(async (event) => {
     try {
       const pictureId = crypto.randomUUID()
 
-      const { url, filename } = await savePictureInBucket(eventId, pictureId, file, weddingEvent)
+      const { url, filename } = await savePictureInBucket(eventId, pictureId, file, session.user.id, weddingEvent)
       const exifData = await extractExifData(file)
 
       pictureRecords.push({
@@ -83,6 +84,7 @@ export default defineEventHandler(async (event) => {
         url,
         capturedAt: exifData.capturedAt,
         pictureHash: parsedFilesInformations[index].hash,
+        size: Number(file.size),
       })
 
       uploadedFilesResult[index] = {
@@ -114,7 +116,7 @@ export default defineEventHandler(async (event) => {
   return []
 })
 
-async function savePictureInBucket(eventId: string, pictureId: string, file: ServerFile, weddingEvent: typeof events.$inferSelect) {
+async function savePictureInBucket(eventId: string, pictureId: string, file: ServerFile, guestId: string, weddingEvent: typeof events.$inferSelect) {
   if (weddingEvent.bucketType === 'filesystem') {
     const filename = await storeFileLocally(
       file,
@@ -128,18 +130,32 @@ async function savePictureInBucket(eventId: string, pictureId: string, file: Ser
     }
   }
   else {
-    throw createError({
-      statusCode: 501,
-      statusMessage: 'R2 bucket not implemented yet',
+    const extension = file.name.split('.').pop() || 'jpg'
+    const builtFileName = `${pictureId}.${extension}`
+    const url = await persistPublicFile(buildUploadedPictureUrl(eventId, builtFileName), file, {
+      eventId,
+      guestId,
     })
+
+    return {
+      url,
+      filename: builtFileName,
+    }
   }
 }
 
 async function extractExifData(file: ServerFile) {
   try {
     const tags = await ExifReader.load(file.content)
+
+    let capturedAt = new Date()
+    if (tags.DateTimeOriginal) {
+      const [year, month, date, hour, min, sec] = tags.DateTimeOriginal.description.split(/\D/)
+      capturedAt = new Date(Number(year), Number(month) - 1, Number(date), Number(hour), Number(min), Number(sec))
+    }
+
     return {
-      capturedAt: tags.DateTimeOriginal ? new Date(tags.DateTimeOriginal.description) : new Date(),
+      capturedAt,
     }
   }
   catch (error) {

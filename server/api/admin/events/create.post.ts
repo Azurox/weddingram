@@ -1,10 +1,11 @@
 import type { ServerFile } from 'nuxt-file-storage'
-import type { EventState } from '~~/server/database/schema/event-schema'
+import type { AvailableStorageType, EventState } from '~~/server/database/schema/event-schema'
 import { eq } from 'drizzle-orm'
-import z from 'zod'
+import z, { url } from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { eventBucketType, events } from '~~/server/database/schema/event-schema'
 import { buildCoverImageUrl, getCoverImageFolder } from '~~/server/service/ImageService'
+import { persistPublicFile } from '~~/server/service/R2Service'
 
 const createEventRequestSchema = z.object({
   name: z.string().max(255),
@@ -23,6 +24,7 @@ export default defineEventHandler(async (event) => {
   const db = useDrizzle()
 
   const { name, shortName, image, bucketUri, bucketType, startDate, endDate } = await readValidatedBody(event, body => createEventRequestSchema.parse(body))
+  const coverImage: ServerFile | undefined = image
 
   const now = new Date()
   let state: EventState = 'draft'
@@ -48,8 +50,9 @@ export default defineEventHandler(async (event) => {
     id: events.id,
   })
 
-  if (image) {
-    const savedImageUrl = await saveCoverImage(image, createdEvent.id)
+  if (coverImage) {
+    const savedImageUrl = await saveCoverImage(bucketType, coverImage, createdEvent.id)
+
     await db.update(events).set({
       imageUrl: savedImageUrl,
       updatedAt: new Date(),
@@ -59,12 +62,22 @@ export default defineEventHandler(async (event) => {
   return createdEvent
 })
 
-async function saveCoverImage(file: ServerFile, eventId: string) {
-  const fileName = await storeFileLocally(
-    file,
-    eventId,
-    getCoverImageFolder(eventId),
-  )
+async function saveCoverImage(storageType: AvailableStorageType, file: ServerFile, eventId: string) {
+  const folder = getCoverImageFolder(storageType, eventId)
+  let fileName: string | undefined
 
-  return buildCoverImageUrl(eventId, fileName)
+  if (storageType === 'filesystem') {
+    fileName = await storeFileLocally(
+      file,
+      eventId,
+      getCoverImageFolder('filesystem', eventId),
+    )
+  }
+  else {
+    fileName = await persistPublicFile(`${folder}${file.name}`, file, {
+      eventId,
+    })
+  }
+
+  return buildCoverImageUrl(storageType, eventId, fileName)
 }

@@ -22,8 +22,8 @@ const sortByMapping = computed(() => {
 
 const fetchParams = computed(() => ({
   page: currentPage.value,
-  sort: sortByMapping.value.sort,
-  direction: sortByMapping.value.direction,
+  sortBy: sortByMapping.value.sort,
+  sortOrder: sortByMapping.value.direction,
 }))
 
 function showInstaView(picture: SerializeObject<UploadedPicture>) {
@@ -34,9 +34,15 @@ function hideInstaView() {
   instaViewFocusedPictureId.value = null
 }
 
-const { data: thumbnails, pending } = await useFetch(`/api/events/single/${uuid}/pictures`, {
+const { data: thumbnails, pending, refresh } = await useFetch(`/api/events/single/${uuid}/pictures`, {
   method: 'GET',
   params: fetchParams,
+})
+
+// Reset pagination and refresh when sort changes
+watch(selectedSortby, () => {
+  currentPage.value = 1
+  refresh()
 })
 
 const hasMore = computed(() => {

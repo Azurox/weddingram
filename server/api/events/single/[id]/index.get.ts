@@ -6,8 +6,6 @@ const eventIdRouterParam = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const _session = await requireUserSession(event)
-
   const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
 
   const [foundEvent, picturesCount] = await Promise.all([

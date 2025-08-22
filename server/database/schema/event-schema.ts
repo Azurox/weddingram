@@ -27,3 +27,5 @@ export const eventsRelations = relations(events, ({ many }) => ({
   pictures: many(pictures),
   guests: many(guests),
 }))
+
+export type AvailableStorageType = typeof eventBucketType.enumValues[number]
