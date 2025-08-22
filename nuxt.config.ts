@@ -24,6 +24,11 @@ export default defineNuxtConfig({
   runtimeConfig: {
     databaseUrl: '',
     masterPassword: process.env.WEDDING_MASTER_PASSWORD || '',
+    R2EndpointS3: '',
+    R2PublicUrl: '',
+    R2AccessKeyId: '',
+    R2SecretAccessKey: '',
+    R2BucketName: '',
     session: {
       maxAge: 60 * 60 * 24 * 7 * 4 * 3, // 3 months
       password: '',

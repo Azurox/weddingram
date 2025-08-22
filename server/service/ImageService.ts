@@ -1,9 +1,16 @@
-export function buildCoverImageUrl(eventId: string, filename: string) {
+import type { AvailableStorageType } from '../database/schema/event-schema'
+
+export function buildFileStorageCoverUrl(eventId: string, filename: string) {
   return `/events/${eventId}/cover/${filename}`
 }
 
-export function getCoverImageFolder(eventId: string) {
-  return `public/events/${eventId}/cover/`
+export function getCoverImageFolder(storageType: AvailableStorageType, eventId: string) {
+  if (storageType === 'filesystem') {
+    return `public/events/${eventId}/cover/`
+  }
+  else {
+    return `events/${eventId}/cover/`
+  }
 }
 
 export function getUploadedPictureFolder(eventId: string) {
@@ -11,5 +18,5 @@ export function getUploadedPictureFolder(eventId: string) {
 }
 
 export function buildUploadedPictureUrl(eventId: string, filename: string) {
-  return `/events/${eventId}/pictures/${filename}`
+  return `events/${eventId}/pictures/${filename}`
 }

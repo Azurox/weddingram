@@ -15,7 +15,7 @@ const form = reactive({
 
 const bucketTypeOptions = [
   { value: 'filesystem', label: 'Filesystem', disabled: false },
-  { value: 'R2', label: 'R2', disabled: true }, // R2 is not implemented yet
+  { value: 'R2', label: 'R2', disabled: false },
 ] satisfies { value: EventBucketType, label: string, disabled: boolean }[]
 
 async function createEvent() {
