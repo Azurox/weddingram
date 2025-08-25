@@ -16,7 +16,7 @@ export const pictures = pgTable('pictures', {
   eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
   pictureHash: varchar('picture_hash', { length: 64 }).notNull(),
   generatedUniquePictureHash: text('generated_unique_picture_hash')
-    .generatedAlwaysAs((): SQL => sql`CONCAT(${pictures.eventId}, ${pictures.pictureHash})`)
+    .generatedAlwaysAs((): SQL => sql`${pictures.eventId} || ${pictures.pictureHash}`)
     .unique(),
   magicDeleteId: uuid('magic_delete_id').defaultRandom().notNull(),
 })
