@@ -1,31 +1,43 @@
 import type { ServerFile } from 'nuxt-file-storage'
 import type { events } from '~~/server/database/schema/event-schema'
 import crypto from 'node:crypto'
-import ExifReader from 'exifreader'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { pictures } from '~~/server/database/schema/picture-schema'
 import { clearEventPictureCountCache, getEventById } from '~~/server/service/EventService'
 import { buildUploadedPictureUrl, getUploadedPictureFolder } from '~~/server/service/ImageService'
-import { persistPublicPictureFile } from '~~/server/service/R2Service'
+import { buildPublicUrl, retrieveFileMetadata } from '~~/server/service/R2Service'
 
 const eventIdRouterParam = z.object({
   id: z.uuid(),
 })
 
-const fileInformationsSchema = z.array(z.object({
-  hash: z.string().length(64), // SHA-256 hash of the file
-})).max(5)
+const fileInformationsSchema = z.array(z.union([
+  z.object({
+    extension: z.string().max(10),
+    contentType: z.string().max(100),
+    length: z.number(),
+    id: z.uuid(),
+    filename: z.string().max(64),
+    hash: z.string().length(64),
+    capturedAt: z.coerce.date().optional(),
+  }),
+  z.object({
+    hash: z.string().length(64), // SHA-256 hash of the file
+    capturedAt: z.coerce.date().optional(),
+  }).strict(),
+])).max(5)
 
 // Currently this method only supports filesystem storage
 export default defineEventHandler(async (event) => {
   const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
-  const { files, filesInformations } = await readBody<{ files: ServerFile[], filesInformations: unknown }>(event)
+  const { files, filesInformations } = await readBody<{ files: ServerFile[] | undefined, filesInformations: unknown }>(event)
   const session = await requireUserSession(event)
 
   const parsedFilesInformations = fileInformationsSchema.parse(filesInformations)
 
-  if (parsedFilesInformations.length !== files.length) {
+  // This only happens when user uploads files directly.
+  if (files?.length && (parsedFilesInformations.length !== files.length)) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Files informations count does not match files count',
@@ -48,54 +60,86 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (!files || files.length === 0) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'No files uploaded',
-    })
-  }
-
   const db = useDrizzle()
   const uploadedFilesResult: Record<number, { status: string, message?: string }> = {}
   const pictureRecords: Array<typeof pictures.$inferInsert> = []
 
-  // TODO : Test if spamming the server with too many files per request could causes issues, in such case, implement a global queue system or use a worker thread
-  // To verify if its possible in nuxt / nitro, there seems to be poor documentation on this topic
-  for (const [index, file] of files.entries()) {
-    if (!file || !file.name || !file.content) {
-      uploadedFilesResult[index] = {
-        status: 'error',
-        message: 'Invalid file',
+  if (weddingEvent.bucketType === 'filesystem' && files) {
+    for (const [index, file] of files.entries()) {
+      if (!file || !file.name || !file.content) {
+        uploadedFilesResult[index] = {
+          status: 'error',
+          message: 'Invalid file',
+        }
+        continue
       }
-      continue
-    }
 
-    try {
-      const pictureId = crypto.randomUUID()
+      try {
+        const pictureId = crypto.randomUUID()
 
-      const { url, filename } = await savePictureInBucket(eventId, pictureId, file, session.user.id, weddingEvent)
-      const exifData = await extractExifData(file)
+        const { url, filename } = await savePictureInLocalBucket(eventId, pictureId, file, session.user.id, weddingEvent)
 
-      pictureRecords.push({
-        filename,
-        eventId,
-        id: pictureId,
-        guestId: session.user.id,
-        url,
-        capturedAt: exifData.capturedAt,
-        pictureHash: parsedFilesInformations[index].hash,
-        size: Number(file.size),
-      })
+        pictureRecords.push({
+          filename,
+          eventId,
+          id: pictureId,
+          guestId: session.user.id,
+          url,
+          capturedAt: parsedFilesInformations[index].capturedAt,
+          pictureHash: parsedFilesInformations[index].hash,
+          size: Number(file.size),
+        })
 
-      uploadedFilesResult[index] = {
-        status: 'success',
+        uploadedFilesResult[index] = {
+          status: 'success',
+        }
+      }
+      catch (error) {
+        console.error(`Error processing file ${index}:`, error)
+        uploadedFilesResult[index] = {
+          status: 'error',
+          message: 'Failed to process file',
+        }
       }
     }
-    catch (error) {
-      console.error(`Error processing file ${index}:`, error)
-      uploadedFilesResult[index] = {
-        status: 'error',
-        message: 'Failed to process file',
+  }
+  else {
+    for (let i = 0; i < parsedFilesInformations.length; i++) {
+      const informations = parsedFilesInformations[i]
+
+      if (!('filename' in informations))
+        continue
+
+      try {
+        const pictureUploadResult = await verifyPictureWasUploaded(informations, eventId, session.user.id)
+
+        if (!pictureUploadResult.success) {
+          uploadedFilesResult[i] = {
+            status: 'error',
+            message: 'Picture was not properly uploaded',
+          }
+          continue
+        }
+        else {
+          pictureRecords.push({
+            filename: informations.filename,
+            eventId,
+            id: informations.id,
+            guestId: session.user.id,
+            url: pictureUploadResult.url,
+            capturedAt: informations.capturedAt,
+            pictureHash: informations.hash,
+            size: pictureUploadResult.actualSize,
+          })
+        }
+      }
+      catch (error) {
+        console.error(`Error verifying uploaded file ${i}:`, error)
+        uploadedFilesResult[i] = {
+          status: 'error',
+          message: 'Failed to verify uploaded file',
+        }
+        continue
       }
     }
   }
@@ -116,7 +160,7 @@ export default defineEventHandler(async (event) => {
   return []
 })
 
-async function savePictureInBucket(eventId: string, pictureId: string, file: ServerFile, guestId: string, weddingEvent: typeof events.$inferSelect) {
+async function savePictureInLocalBucket(eventId: string, pictureId: string, file: ServerFile, guestId: string, weddingEvent: typeof events.$inferSelect) {
   if (weddingEvent.bucketType === 'filesystem') {
     const filename = await storeFileLocally(
       file,
@@ -130,38 +174,42 @@ async function savePictureInBucket(eventId: string, pictureId: string, file: Ser
     }
   }
   else {
-    const extension = file.name.split('.').pop() || 'jpg'
-    const builtFileName = `${pictureId}.${extension}`
-    const url = await persistPublicPictureFile(buildUploadedPictureUrl(eventId, builtFileName), file, {
-      eventId,
-      guestId,
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Event with R2 bucket type does not support direct upload',
     })
-
-    return {
-      url,
-      filename: builtFileName,
-    }
   }
 }
 
-async function extractExifData(file: ServerFile) {
-  try {
-    const tags = await ExifReader.load(file.content)
+async function verifyPictureWasUploaded(fileInformation: z.infer<typeof fileInformationsSchema>[number], eventId: string, guestId: string) {
+  if (!('filename' in fileInformation)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'File information does not come from inquiry upload',
+    })
+  }
 
-    let capturedAt = new Date()
-    if (tags.DateTimeOriginal) {
-      const [year, month, date, hour, min, sec] = tags.DateTimeOriginal.description.split(/\D/)
-      capturedAt = new Date(Number(year), Number(month) - 1, Number(date), Number(hour), Number(min), Number(sec))
+  const fileMetadata = await retrieveFileMetadata(fileInformation.filename)
+  if (fileMetadata.Metadata && 'eventid' in fileMetadata.Metadata && 'guestid' in fileMetadata.Metadata) {
+    if (fileMetadata.Metadata.eventid !== eventId || fileMetadata.Metadata.guestid !== guestId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'File metadata does not match event or guest',
+        data: { expectedEventId: eventId, expectedGuestId: guestId, actualEventId: fileMetadata.Metadata.eventid, actualGuestd: fileMetadata.Metadata.guestid },
+      })
     }
-
-    return {
-      capturedAt,
+    else {
+      return {
+        success: true,
+        actualSize: Number(fileMetadata.ContentLength),
+        url: buildPublicUrl(fileInformation.filename),
+      }
     }
   }
-  catch (error) {
-    console.error('Error extracting EXIF data:', error)
-    return {
-      capturedAt: new Date(), // Fallback to current date if EXIF data extraction fails
-    }
+  else {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'File metadata is missing eventId or guestId',
+    })
   }
 }

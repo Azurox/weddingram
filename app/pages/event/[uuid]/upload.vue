@@ -21,7 +21,7 @@ const { isUploadCompleted } = useGlobalPictureUploader()
         </UiContainer>
       </header>
       <UiContainer>
-        <event-upload-form />
+        <event-upload-form :upload-target="event?.bucketType" />
       </UiContainer>
       <UiContainer v-if="isUploadCompleted" class="w-full px-2">
         <div class="bg-green-50 border border-green-200 rounded-lg w-full max-w-2xl mx-auto p-4 flex items-center gap-3">
