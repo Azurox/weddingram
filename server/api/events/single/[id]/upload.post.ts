@@ -195,7 +195,7 @@ async function verifyPictureWasUploaded(fileInformation: z.infer<typeof fileInfo
       throw createError({
         statusCode: 400,
         statusMessage: 'File metadata does not match event or guest',
-        data: { expectedEventId: eventId, expectedGuestId: guestId, actualEventId: fileMetadata.Metadata.eventid, actualGuestd: fileMetadata.Metadata.guestid },
+        data: { expectedEventId: eventId, expectedGuestId: guestId, actualEventId: fileMetadata.Metadata.eventid, actualGuestId: fileMetadata.Metadata.guestid },
       })
     }
     else {

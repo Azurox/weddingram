@@ -55,14 +55,13 @@ export function useGlobalPictureUploader() {
   }
 
   async function uploadFilesystemBatch(files: ClientFile[], filesInformations: FileComplementaryInformations[]) {
-    const result = await $fetch(`/api/events/single/${uuid.value}/upload`, {
+    return await $fetch(`/api/events/single/${uuid.value}/upload`, {
       method: 'POST',
       body: {
         files,
         filesInformations,
       },
     })
-    return result
   }
 
   async function uploadR2Batch(files: ClientFile[], filesInformations: FileComplementaryInformations[]) {
@@ -85,8 +84,6 @@ export function useGlobalPictureUploader() {
       body: inquiryInformations,
     })
 
-    console.log('inquiryUploadUrls', inquiryUploadUrls)
-
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       const uploadData = inquiryUploadUrls[i]
@@ -97,20 +94,21 @@ export function useGlobalPictureUploader() {
       }
 
       if (file && uploadData && 'url' in uploadData && typeof file.content === 'string') {
-        const base64Data = file.content.replace(/^data:image\/\w+;base64,/, '')
-        const binaryData = atob(base64Data)
-        const bytes = new Uint8Array(binaryData.length)
-        for (let i = 0; i < binaryData.length; i++) {
-          bytes[i] = binaryData.charCodeAt(i)
-        }
+        const response = await fetch(file.content)
+        const arrayBuffer = await response.arrayBuffer()
+        const uint8Array = new Uint8Array(arrayBuffer)
 
-        const result = await $fetch(uploadData.url, {
+        await $fetch(uploadData.url, {
           method: 'PUT',
           headers: uploadData.headers,
-          body: bytes,
+          body: uint8Array,
         })
-        console.log(result)
       }
+    }
+
+    if (inquiryUploadUrls.length !== files.length) {
+      console.error('Mismatch between inquiryUploadUrls and files lengths:', inquiryUploadUrls.length, files.length)
+      throw new Error('The number of inquiry upload URLs does not match the number of files. Please check your input.')
     }
 
     const mergedFileFilesInformations = inquiryUploadUrls.map((info, index) => {

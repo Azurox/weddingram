@@ -68,7 +68,5 @@ export async function getPresignedUploadUrl(name: string, contentType: string, c
     Metadata: metadata,
   })
 
-  const signedUrl = await getSignedUrl(S3, command, { expiresIn: 3600, unhoistableHeaders: new Set(Object.keys(customerHeaders)) })
-
-  return signedUrl
+  return await getSignedUrl(S3, command, { expiresIn: 3600, unhoistableHeaders: new Set(Object.keys(customerHeaders)) })
 }
