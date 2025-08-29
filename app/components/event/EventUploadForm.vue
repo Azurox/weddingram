@@ -1,5 +1,9 @@
 <script lang="ts" setup>
+import type { ClientFile } from 'nuxt-file-storage'
+import type { EventBucketType } from '~~/server/database/schema/event-schema'
 import { useTimeoutFn } from '@vueuse/core'
+
+const { uploadTarget } = defineProps<{ uploadTarget?: EventBucketType }>()
 
 const { handleFileInput, files } = useFileStorage()
 const { uploadPictures, isLoading } = useGlobalPictureUploader()
@@ -56,7 +60,9 @@ watchDebounced(files, async () => {
 async function startUploadProcess() {
   showProgress.value = true
   start()
-  await uploadPictures(files.value)
+  if (uploadTarget) {
+    await uploadPictures(files.value as ClientFile[], uploadTarget)
+  }
 
   if (isPending.value === false && showProgress.value === true) {
     showProgress.value = false

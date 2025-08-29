@@ -28,6 +28,7 @@ export function mapEventToPublic(event: NonNullable<Awaited<ReturnType<typeof ge
     imageUrl: event.imageUrl,
     pictureCount,
     eventUrl: getEventUrl(event.id),
+    bucketType: event.bucketType,
   }
 }
 
