@@ -70,7 +70,7 @@ function handleTouchEnd() {
 </script>
 
 <template>
-  <div class="relative overflow-hidden">
+  <div class="relative overflow-hidden select-none">
     <button class="appearance-none border-0 rounded-none bg-none w-full h-full block" @touchstart="handleTouchStart" @click="handleTouchEnd" @mousedown="handleTouchStart" @contextmenu.prevent>
       <img
         ref="imageRef" :src="picture.url" class="w-full aspect-square object-cover pointer-events-none" :class="[
