@@ -4,12 +4,13 @@ import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/
 import { useInfiniteScroll } from '@vueuse/core'
 import { useRouteHash } from '@vueuse/router'
 
-const { goBackContext = 'Home', hasMore = false, isLoading, initialPictureId } = defineProps<{
+const { goBackContext = 'Home', hasMore = false, isLoading, initialPictureId, allowDoubleTap = false } = defineProps<{
   pictureList: SerializeObject<UploadedPicture>[]
   goBackContext?: string
   hasMore?: boolean
   isLoading: boolean
   initialPictureId?: string
+  allowDoubleTap?: boolean
 }>()
 
 const emits = defineEmits<{
@@ -62,7 +63,7 @@ onMounted(() => {
       </UiContainer>
     </button>
     <div ref="scrollContainer" class="flex flex-col gap-10 snap-y snap-proximity overflow-auto scroll-pt-4 pt-4 pb-40">
-      <EventPictureInstaViewThumbnail v-for="picture in pictureList" :id="`instaview-${picture.id}`" :key="picture.id" :picture="picture" />
+      <EventPictureInstaViewThumbnail v-for="picture in pictureList" :id="`instaview-${picture.id}`" :key="picture.id" :picture="picture" :allow-double-tap="allowDoubleTap" />
       <span v-if="!hasMore && !isLoading" class="text-center text-2xl italic text-neutral-600 font-logo">
         The end.
       </span>

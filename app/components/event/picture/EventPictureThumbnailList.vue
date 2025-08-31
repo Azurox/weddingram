@@ -115,7 +115,7 @@ useInfiniteScroll(
       </UiContainer>
 
       <Transition name="full-screen-slide" appear>
-        <EventPictureInstaView v-if="instaViewFocusedPictureId" :picture-list="pictureList || []" :initial-picture-id="instaViewFocusedPictureId" go-back-context="Home" :has-more="hasMore" :is-loading="pending" @next-page="currentPage++" @close="hideInstaView" />
+        <EventPictureInstaView v-if="instaViewFocusedPictureId" :picture-list="pictureList || []" :initial-picture-id="instaViewFocusedPictureId" go-back-context="Home" :has-more="hasMore" :is-loading="pending" allow-double-tap @next-page="currentPage++" @close="hideInstaView" />
       </Transition>
     </template>
   </div>
