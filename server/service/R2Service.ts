@@ -1,6 +1,6 @@
 import type { ServerFile } from 'nuxt-file-storage'
 import { Buffer } from 'node:buffer'
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 function createS3Client() {
@@ -69,4 +69,21 @@ export async function getPresignedUploadUrl(name: string, contentType: string, c
   })
 
   return await getSignedUrl(S3, command, { expiresIn: 3600, unhoistableHeaders: new Set(Object.keys(customerHeaders)) })
+}
+
+export async function deleteFile(filename: string) {
+  const S3 = createS3Client()
+  const config = useRuntimeConfig()
+
+  try {
+    await S3.send(new DeleteObjectCommand({
+      Bucket: config.R2BucketName,
+      Key: filename,
+    }))
+    return { success: true }
+  }
+  catch (error) {
+    console.error('Error deleting file from R2:', error)
+    throw error
+  }
 }
