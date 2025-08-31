@@ -16,7 +16,6 @@ const fileInformationsSchema = z.array(z.object({
   length: z.number(),
 })).max(5)
 
-// Currently this method only supports filesystem storage
 export default defineEventHandler(async (event) => {
   const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
   const fileInformations = await readValidatedBody(event, fileInformationsSchema.parse)
@@ -102,7 +101,6 @@ export default defineEventHandler(async (event) => {
       },
       headers: {
         ...customHeadersForMetadata,
-        // 'ContentEncoding': 'base64',
         'Content-Type': fileInformation.contentType,
       },
       isDuplicate: false,

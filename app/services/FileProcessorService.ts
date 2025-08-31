@@ -20,7 +20,7 @@ export class FileProcessorService {
     }
     // Convert string content to ArrayBuffer
     const encoder = new TextEncoder()
-    const data = encoder.encode(file.content)
+    const data = encoder.encode(file.content) // file.content is a data URL
     const hashBuffer = await crypto.subtle.digest('SHA-256', data)
     const hashArray = Array.from(new Uint8Array(hashBuffer))
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')

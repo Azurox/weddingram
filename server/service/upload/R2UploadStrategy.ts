@@ -110,12 +110,10 @@ export class R2UploadStrategy implements UploadStrategy {
           },
         })
       }
-      else {
-        return {
-          success: true,
-          actualSize: Number(fileMetadata.ContentLength),
-          url: buildPublicUrl(fileInfo.filename),
-        }
+      return {
+        success: true,
+        actualSize: Number(fileMetadata.ContentLength),
+        url: buildPublicUrl(fileInfo.filename),
       }
     }
     else {
@@ -127,9 +125,14 @@ export class R2UploadStrategy implements UploadStrategy {
   }
 
   private isR2FileInfo(fileInfo: ProcessedFileInfo): fileInfo is R2ProcessedFileInfo {
-    return 'filename' in fileInfo && 'id' in fileInfo
-      && typeof (fileInfo as any).filename === 'string'
-      && typeof (fileInfo as any).id === 'string'
+    return (
+      typeof fileInfo === 'object'
+      && fileInfo !== null
+      && 'filename' in fileInfo
+      && 'id' in fileInfo
+      && typeof (fileInfo as { filename?: unknown }).filename === 'string'
+      && typeof (fileInfo as { id?: unknown }).id === 'string'
+    )
   }
 
   private getFilenameFromFileInfo(fileInfo: ProcessedFileInfo): string | undefined {

@@ -82,7 +82,7 @@ export class R2UploadStrategy implements ClientUploadStrategy {
 
       if (file && uploadData && 'url' in uploadData && typeof file.content === 'string') {
         // Convert string content to ArrayBuffer for upload
-        const response = await fetch(file.content)
+        const response = await fetch(file.content) // file.content is a data URL
         const arrayBuffer = await response.arrayBuffer()
         const uint8Array = new Uint8Array(arrayBuffer)
 
