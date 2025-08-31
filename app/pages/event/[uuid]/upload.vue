@@ -7,6 +7,10 @@ definePageMeta({
 const { uuid } = useRoute().params as { uuid: string }
 const { data: event } = await useFetch(`/api/events/single/${uuid}`, { key: `event:${uuid}:details` })
 
+useSeoMeta({
+  title: () => `Weddingram - ${event?.value?.name ?? 'event'} | Upload`,
+})
+
 const { isUploadCompleted } = useGlobalPictureUploader()
 </script>
 

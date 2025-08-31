@@ -6,6 +6,10 @@ definePageMeta({
 
 const { uuid } = useRoute().params as { uuid: string }
 const { data: event } = await useFetch(`/api/events/single/${uuid}`, { key: `event:${uuid}:details` })
+
+useSeoMeta({
+  title: () => `Weddingram - ${event?.value?.name ?? 'event'}`,
+})
 </script>
 
 <template>
@@ -13,7 +17,7 @@ const { data: event } = await useFetch(`/api/events/single/${uuid}`, { key: `eve
     <header class="border-b border-b-almond-700/20">
       <UiContainer class="flex justify-between items-center gap-4 px-5 py-4">
         <div class="flex items-center gap-4 justify-center">
-          <div class="rounded-full size-6 bg-almond-400" />
+          <img src="assets/images/icons/logo.svg" class="size-8" alt="Logo">
           <div>
             <h1 class="font-logo text-2xl/normal tracking-wide">
               Weddingram

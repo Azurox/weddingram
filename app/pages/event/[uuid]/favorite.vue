@@ -9,7 +9,12 @@ definePageMeta({
 
 const route = useRoute()
 const { uuid } = route.params as { uuid: string }
+const { data: event } = await useFetch(`/api/events/single/${uuid}`, { key: `event:${uuid}:details` })
 const { favorites } = useFavoriteStorage()
+
+useSeoMeta({
+  title: () => `Weddingram - ${event?.value?.name ?? 'event'} | Favorite`,
+})
 
 const isDownloadingAll = ref(false)
 const downloadProgress = ref({ current: 0, total: 0 })

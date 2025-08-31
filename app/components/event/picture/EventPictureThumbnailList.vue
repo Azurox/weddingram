@@ -37,6 +37,7 @@ function hideInstaView() {
 const { data: thumbnails, pending, refresh } = await useFetch(`/api/events/single/${uuid}/pictures`, {
   method: 'GET',
   params: fetchParams,
+  lazy: true,
 })
 
 // Reset pagination and refresh when sort changes

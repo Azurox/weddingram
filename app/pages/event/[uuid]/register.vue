@@ -3,6 +3,10 @@ const { uuid } = useRoute().params as { uuid: string }
 const { data: event } = await useFetch(`/api/events/single/${uuid}`, { key: `event:${uuid}:details` })
 const { fetch: fetchUserSession } = useUserSession()
 
+useSeoMeta({
+  title: () => `Weddingram - ${event?.value?.name ?? 'event'} | Register`,
+})
+
 const registerError = ref<string>()
 
 const form = reactive({
