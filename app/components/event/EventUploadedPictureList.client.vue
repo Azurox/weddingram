@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { fa } from 'zod/v4/locales'
 import { ToastService } from '~/services/ToastService'
 
 const { uploadedPictures } = useUploadedPictureStorage()

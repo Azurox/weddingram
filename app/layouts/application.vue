@@ -1,9 +1,9 @@
 <template>
   <div class="flex flex-col w-full min-h-[100svh]">
-    <main class="flex w-full flex-1 ">
+    <main class="flex w-full flex-1 pb-20">
       <slot />
     </main>
-    <event-navigation-bar class="sticky bottom-0 right-0 left-0" />
+    <event-navigation-bar />
   </div>
 </template>
 

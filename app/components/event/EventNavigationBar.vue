@@ -10,7 +10,7 @@ function dismissUploadNotification() {
 </script>
 
 <template>
-  <div class="menu-holder flex border-t border-t-almond-200 bg-white shadow-xl relative z-40">
+  <div class="menu-holder fixed bottom-0 right-0 left-0 flex border-t border-t-almond-200 bg-white shadow-xl z-40">
     <menu class="flex gap-6 items-center justify-between max-w-96 w-full mx-auto px-6">
       <li>
         <NuxtLink :to="`/event/${uuid}/`" class="py-3 px-4 flex items-center justify-center group relative" active-class="active" @click="dismissUploadNotification">
@@ -46,5 +46,6 @@ function dismissUploadNotification() {
 <style scoped>
 .menu-holder {
   box-shadow: -1px -8px 26px -10px rgba(204, 204, 204, 0.75);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 </style>
