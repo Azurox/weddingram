@@ -2,6 +2,7 @@
 import type { SerializeObject } from 'nitropack'
 import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/index.get'
 import { useInfiniteScroll } from '@vueuse/core'
+import { useRouteHash } from '@vueuse/router'
 
 const { goBackContext = 'Home', hasMore = false, isLoading, initialPictureId } = defineProps<{
   pictureList: SerializeObject<UploadedPicture>[]
@@ -15,6 +16,13 @@ const emits = defineEmits<{
   close: []
   nextPage: []
 }>()
+
+const routeHash = useRouteHash()
+watch(routeHash, (newHash) => {
+  if (newHash !== '#insta-view') {
+    emits('close')
+  }
+})
 
 const scrollContainer = useTemplateRef('scrollContainer')
 
@@ -44,7 +52,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <aside class="overflow-auto fixed inset-0 z-40 bg-white flex flex-col">
+  <aside id="insta-view" class="overflow-auto fixed inset-0 z-40 bg-white flex flex-col">
     <button class="py-4 px-2 appearance-none border-0 rounded-none text-left font-logo text-2xl bg-almond-50" @click="emits('close')">
       <UiContainer class="flex gap-2 items-center">
         <svg xmlns="http://www.w3.org/2000/svg" class="size-6" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="m14 18l-6-6l6-6l1.4 1.4l-4.6 4.6l4.6 4.6z" /></svg>

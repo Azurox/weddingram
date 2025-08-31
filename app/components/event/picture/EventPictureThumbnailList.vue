@@ -6,6 +6,7 @@ import { useInfiniteScroll } from '@vueuse/core'
 type AvailableSortby = 'recent' | 'startOfWedding' | 'endOfWedding'
 
 const { uuid } = useRoute().params as { uuid: string }
+const router = useRouter()
 const pictureList = ref<SerializeObject<UploadedPicture>[]>()
 const selectedSortby = ref<AvailableSortby>('recent')
 const currentPage = ref(1)
@@ -29,11 +30,15 @@ const fetchParams = computed(() => ({
 function showInstaView(picture: SerializeObject<UploadedPicture>) {
   nextTick(() => {
     instaViewFocusedPictureId.value = picture.id
+    // Navigation is handled by the EventPictureInstaView component itself
   })
+  router.push({ hash: `#insta-view` })
 }
 
 function hideInstaView() {
   instaViewFocusedPictureId.value = null
+  // Clear the hash when closing
+  router.replace({ hash: '' })
 }
 
 const { data: thumbnails, pending, refresh } = await useFetch(`/api/events/single/${uuid}/pictures`, {

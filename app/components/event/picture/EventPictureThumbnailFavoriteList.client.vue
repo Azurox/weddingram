@@ -15,6 +15,7 @@ const pending = ref(false)
 const instaViewFocusedPictureId = ref<string | null>(null)
 
 const { uuid } = useRoute().params as { uuid: string }
+const router = useRouter()
 const { favorites, removeFavorite } = useFavoriteStorage()
 const selectedPictures = ref(new Set<string>())
 const isLoadingMultiDownload = ref(false)
@@ -102,11 +103,14 @@ function selectPicture(picture: SerializeObject<UploadedPicture>) {
   }
   else {
     instaViewFocusedPictureId.value = picture.id
+    router.push({ hash: `#insta-view` })
   }
 }
 
 function hideInstaView() {
   instaViewFocusedPictureId.value = null
+  // Clear the hash when closing
+  router.replace({ hash: '' })
 }
 
 async function longSelectPicture(picture: SerializeObject<UploadedPicture>) {
