@@ -14,6 +14,7 @@ export default defineNuxtConfig({
     'nuxt-file-storage',
     '@vueuse/nuxt',
     '@nuxt/fonts',
+    'nuxt-toast',
   ],
   css: ['~/assets/css/main.css'],
   vite: {

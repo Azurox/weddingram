@@ -2,6 +2,7 @@ import type { ClientFile } from 'nuxt-file-storage'
 import type { EventBucketType } from '~~/server/database/schema/event-schema'
 import { BatchUploadService } from '~/services/BatchUploadService'
 import { FileProcessorService } from '~/services/FileProcessorService'
+import { ToastService } from '~/services/ToastService'
 import { UploadStrategyService } from '~/services/UploadStrategyService'
 import { useUploadState } from './state/useUploadState'
 
@@ -32,6 +33,11 @@ export function useGlobalPictureUploader() {
           },
           onBatchError: (error, batchIndex) => {
             console.error(`Batch ${batchIndex} failed:`, error)
+            useToast().error({
+              title: 'Upload Error',
+              message: `Some pictures may not have been uploaded. Please try again by uploading less pictures.`,
+              ...ToastService.getPresetForError(),
+            })
             // Continue with other batches instead of failing completely
           },
         },
@@ -41,6 +47,13 @@ export function useGlobalPictureUploader() {
     }
     catch (error) {
       console.error('Failed to upload pictures:', error)
+
+      useToast().error({
+        title: 'Upload Error',
+        message: `Some pictures may not have been uploaded. Please try again by uploading less pictures.`,
+        ...ToastService.getPresetForError(),
+      })
+
       uploadState.setError(error as Error)
     }
   }

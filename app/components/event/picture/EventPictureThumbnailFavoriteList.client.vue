@@ -4,6 +4,7 @@ import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/
 import { useInfiniteScroll } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import UiContainer from '~/components/ui/UiContainer.vue'
+import { ToastService } from '~/services/ToastService'
 import { downloadAsBlob } from '~/services/utilService'
 
 const PAGE_SIZE = 20
@@ -157,8 +158,12 @@ async function handleMultiDownload() {
     downloadAsBlob(finalBlob, `favorites-${downloadedFiles.length}_pictures-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`)
   }
   catch (error) {
-    // TODO implement a toast error handling notification
     console.error('Error downloading selected pictures:', error)
+    useToast().error({
+      title: 'Download Error',
+      message: 'An error occurred while downloading the selected pictures. Please try again later.',
+      ...ToastService.getPresetForError(),
+    })
   }
   finally {
     isLoadingMultiDownload.value = false

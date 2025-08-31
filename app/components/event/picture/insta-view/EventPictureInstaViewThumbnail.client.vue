@@ -2,6 +2,7 @@
 import type { SerializeObject } from 'nitropack'
 import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/index.get'
 import UiContainer from '~/components/ui/UiContainer.vue'
+import { ToastService } from '~/services/ToastService'
 import { downloadAsBlob } from '~/services/utilService'
 
 const { picture } = defineProps<{
@@ -19,8 +20,12 @@ async function downloadPicture() {
     downloadAsBlob(blob, extractedFilename)
   }
   catch (error) {
-    // TODO :  better error handling
     console.error('Failed to download picture:', error)
+    useToast().error({
+      title: 'Download Error',
+      message: 'An error occurred while downloading the picture. Please try again later.',
+      ...ToastService.getPresetForError(),
+    })
   }
 }
 </script>

@@ -1,4 +1,7 @@
 <script lang="ts" setup>
+import { fa } from 'zod/v4/locales'
+import { ToastService } from '~/services/ToastService'
+
 const { uploadedPictures } = useUploadedPictureStorage()
 const { isDeleting, deletePicturesByMagicIds } = usePictureDelete()
 
@@ -27,6 +30,11 @@ async function handleDelete() {
   }
   catch (error) {
     console.error('Failed to delete pictures:', error)
+    useToast().error({
+      title: 'Deletion Error',
+      message: 'An error occurred while deleting the selected pictures. Please try again later.',
+      ...ToastService.getPresetForError(),
+    })
   }
 }
 </script>
