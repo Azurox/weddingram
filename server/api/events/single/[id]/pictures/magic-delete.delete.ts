@@ -1,10 +1,9 @@
-import type { events } from '~~/server/database/schema/event-schema'
 import { and, eq, inArray } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { pictures } from '~~/server/database/schema/picture-schema'
+import { PictureDeletionOrchestrator } from '~~/server/service/deletion/PictureDeletionOrchestrator'
 import { getEventById } from '~~/server/service/EventService'
-import { getUploadedPictureFolder } from '~~/server/service/ImageService'
 
 const eventIdRouterParam = z.object({
   id: z.uuid(),
@@ -13,18 +12,6 @@ const eventIdRouterParam = z.object({
 const deleteRequestSchema = z.object({
   magicDeleteIds: z.array(z.uuid()).min(1),
 })
-
-async function deletePictureFromBucket(pictureUrl: string, weddingEvent: typeof events.$inferSelect) {
-  if (weddingEvent.bucketType === 'filesystem') {
-    await deleteFile(pictureUrl, getUploadedPictureFolder(weddingEvent.id))
-  }
-  else {
-    throw createError({
-      statusCode: 501,
-      statusMessage: 'R2 bucket not implemented yet',
-    })
-  }
-}
 
 export default defineEventHandler(async (event) => {
   const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
@@ -43,8 +30,8 @@ export default defineEventHandler(async (event) => {
   const db = useDrizzle()
 
   try {
-    const event = await getEventById(eventId)
-    if (!event) {
+    const weddingEvent = await getEventById(eventId)
+    if (!weddingEvent) {
       throw createError({
         statusCode: 404,
         statusMessage: 'Event not found',
@@ -66,10 +53,11 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 404,
         statusMessage: 'No pictures found with the provided delete IDs',
+        data: { requestedIds: parsedRequest.magicDeleteIds },
       })
     }
 
-    // Delete the pictures
+    // Delete the pictures from the database first
     const deletedPictures = await db
       .delete(pictures)
       .where(
@@ -84,18 +72,20 @@ export default defineEventHandler(async (event) => {
         magicDeleteId: pictures.magicDeleteId,
       })
 
-    // Filesystem
-    // parallelize that
-    for (const picture of deletedPictures) {
-      await deletePictureFromBucket(picture.filename, event)
-    }
+    const deletionResult = await PictureDeletionOrchestrator.deletePictures(
+      deletedPictures,
+      weddingEvent,
+    )
 
-    // TODO: Clean up actual files from storage (filesystem/R2)
+    if (deletionResult.errors.length > 0) {
+      console.warn('Some files could not be deleted from storage:', deletionResult.errors)
+    }
 
     return {
       success: true,
       deletedCount: deletedPictures.length,
       deletedIds: deletedPictures.map(p => p.magicDeleteId),
+      storageErrors: deletionResult.errors.length > 0 ? deletionResult.errors : undefined,
     }
   }
   catch (error) {

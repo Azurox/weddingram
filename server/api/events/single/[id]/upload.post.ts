@@ -1,36 +1,34 @@
 import type { ServerFile } from 'nuxt-file-storage'
-import type { events } from '~~/server/database/schema/event-schema'
-import crypto from 'node:crypto'
-import ExifReader from 'exifreader'
 import z from 'zod'
-import { useDrizzle } from '~~/server/database'
-import { pictures } from '~~/server/database/schema/picture-schema'
-import { clearEventPictureCountCache, getEventById } from '~~/server/service/EventService'
-import { buildUploadedPictureUrl, getUploadedPictureFolder } from '~~/server/service/ImageService'
-import { persistPublicPictureFile } from '~~/server/service/R2Service'
+import { getEventById } from '~~/server/service/EventService'
+import { PictureUploadOrchestrator } from '~~/server/service/upload/PictureUploadOrchestrator'
 
 const eventIdRouterParam = z.object({
   id: z.uuid(),
 })
 
-const fileInformationsSchema = z.array(z.object({
-  hash: z.string().length(64), // SHA-256 hash of the file
-})).max(5)
+const fileInformationsSchema = z.array(z.union([
+  z.object({
+    extension: z.string().max(10),
+    contentType: z.string().max(100),
+    length: z.number(),
+    id: z.uuid(),
+    filename: z.string().max(64),
+    hash: z.string().length(64),
+    capturedAt: z.coerce.date().optional(),
+  }),
+  z.object({
+    hash: z.string().length(64), // SHA-256 hash of the file
+    capturedAt: z.coerce.date().optional(),
+  }).strict(),
+])).max(5)
 
-// Currently this method only supports filesystem storage
 export default defineEventHandler(async (event) => {
   const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
-  const { files, filesInformations } = await readBody<{ files: ServerFile[], filesInformations: unknown }>(event)
+  const { files, filesInformations } = await readBody<{ files: ServerFile[] | undefined, filesInformations: unknown }>(event)
   const session = await requireUserSession(event)
 
   const parsedFilesInformations = fileInformationsSchema.parse(filesInformations)
-
-  if (parsedFilesInformations.length !== files.length) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Files informations count does not match files count',
-    })
-  }
 
   if (!session.user.id) {
     throw createError({
@@ -48,120 +46,56 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (!files || files.length === 0) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'No files uploaded',
-    })
-  }
+  let processedFiles
 
-  const db = useDrizzle()
-  const uploadedFilesResult: Record<number, { status: string, message?: string }> = {}
-  const pictureRecords: Array<typeof pictures.$inferInsert> = []
-
-  // TODO : Test if spamming the server with too many files per request could causes issues, in such case, implement a global queue system or use a worker thread
-  // To verify if its possible in nuxt / nitro, there seems to be poor documentation on this topic
-  for (const [index, file] of files.entries()) {
-    if (!file || !file.name || !file.content) {
-      uploadedFilesResult[index] = {
-        status: 'error',
-        message: 'Invalid file',
-      }
-      continue
-    }
-
-    try {
-      const pictureId = crypto.randomUUID()
-
-      const { url, filename } = await savePictureInBucket(eventId, pictureId, file, session.user.id, weddingEvent)
-      const exifData = await extractExifData(file)
-
-      pictureRecords.push({
-        filename,
-        eventId,
-        id: pictureId,
-        guestId: session.user.id,
-        url,
-        capturedAt: exifData.capturedAt,
-        pictureHash: parsedFilesInformations[index].hash,
-        size: Number(file.size),
+  if (weddingEvent.bucketType === 'filesystem' && files) {
+    // This only happens when user uploads files directly.
+    if (files.length && (parsedFilesInformations.length !== files.length)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Files informations count does not match files count',
       })
-
-      uploadedFilesResult[index] = {
-        status: 'success',
-      }
     }
-    catch (error) {
-      console.error(`Error processing file ${index}:`, error)
-      uploadedFilesResult[index] = {
-        status: 'error',
-        message: 'Failed to process file',
-      }
-    }
-  }
 
-  // Batch insert all successfully processed pictures
-  if (pictureRecords.length > 0) {
-    const insertedPictures = await db.insert(pictures).values(pictureRecords).onConflictDoNothing().returning({
-      deleteId: pictures.magicDeleteId,
-      id: pictures.id,
-      url: pictures.url,
-    })
-
-    await clearEventPictureCountCache(eventId)
-
-    return insertedPictures
-  }
-
-  return []
-})
-
-async function savePictureInBucket(eventId: string, pictureId: string, file: ServerFile, guestId: string, weddingEvent: typeof events.$inferSelect) {
-  if (weddingEvent.bucketType === 'filesystem') {
-    const filename = await storeFileLocally(
-      file,
-      pictureId,
-      getUploadedPictureFolder(eventId),
+    processedFiles = PictureUploadOrchestrator.createFromServerFiles(
+      files,
+      parsedFilesInformations.map(info => ({
+        hash: info.hash,
+        capturedAt: info.capturedAt,
+      })),
     )
-
-    return {
-      url: buildUploadedPictureUrl(eventId, filename),
-      filename,
-    }
   }
   else {
-    const extension = file.name.split('.').pop() || 'jpg'
-    const builtFileName = `${pictureId}.${extension}`
-    const url = await persistPublicPictureFile(buildUploadedPictureUrl(eventId, builtFileName), file, {
-      eventId,
-      guestId,
-    })
+    // R2 upload flow - files have already been uploaded via presigned URLs
+    const r2FileInfos = parsedFilesInformations.filter((info): info is {
+      extension: string
+      contentType: string
+      length: number
+      id: string
+      filename: string
+      hash: string
+      capturedAt?: Date
+    } =>
+      'filename' in info && 'extension' in info && 'contentType' in info && 'length' in info && 'id' in info,
+    )
 
-    return {
-      url,
-      filename: builtFileName,
+    if (r2FileInfos.length === 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'No valid R2 file informations provided',
+      })
     }
+
+    processedFiles = PictureUploadOrchestrator.createFromR2Inquiry(r2FileInfos)
   }
-}
 
-async function extractExifData(file: ServerFile) {
-  try {
-    const tags = await ExifReader.load(file.content)
+  // Upload using the orchestrator
+  const results = await PictureUploadOrchestrator.uploadPictures(
+    processedFiles,
+    eventId,
+    session.user.id,
+    weddingEvent,
+  )
 
-    let capturedAt = new Date()
-    if (tags.DateTimeOriginal) {
-      const [year, month, date, hour, min, sec] = tags.DateTimeOriginal.description.split(/\D/)
-      capturedAt = new Date(Number(year), Number(month) - 1, Number(date), Number(hour), Number(min), Number(sec))
-    }
-
-    return {
-      capturedAt,
-    }
-  }
-  catch (error) {
-    console.error('Error extracting EXIF data:', error)
-    return {
-      capturedAt: new Date(), // Fallback to current date if EXIF data extraction fails
-    }
-  }
-}
+  return results
+})
