@@ -73,7 +73,7 @@ function handleTouchEnd() {
   <div class="relative overflow-hidden">
     <button class="appearance-none border-0 rounded-none bg-none w-full h-full block" @touchstart="handleTouchStart" @click="handleTouchEnd" @mousedown="handleTouchStart" @contextmenu.prevent>
       <img
-        ref="imageRef" :src="picture.url" class="w-full aspect-square object-cover" :class="[
+        ref="imageRef" :src="picture.url" class="w-full aspect-square object-cover pointer-events-none" :class="[
           isLoaded ? 'scale-100 opacity-100' : 'scale-105 opacity-0',
           shouldAnimate ? 'transition-all duration-700' : '',
         ]" :data-loaded="isLoaded" @load="handleImageLoad"

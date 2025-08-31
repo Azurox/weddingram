@@ -100,7 +100,7 @@ async function handleDelete() {
     <Transition name="slide-in">
       <UiContainer
         v-if="selectedPictures.size > 0"
-        class="fixed right-10 left-10 bottom-16 z-30 pointer-events-none flex"
+        class="fixed right-10 left-10 bottom-16 z-30 pointer-events-none flex pb-[env(safe-area-inset-bottom)]"
       >
         <div class="ml-auto relative">
           <button
