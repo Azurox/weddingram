@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { SerializeObject } from 'nitropack'
 import type { UploadedPicture } from '~~/server/api/events/single/[id]/pictures/index.get'
-import { useInfiniteScroll } from '@vueuse/core'
+import { useEventListener, useInfiniteScroll } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import UiContainer from '~/components/ui/UiContainer.vue'
 import { ToastService } from '~/services/ToastService'
@@ -96,6 +96,10 @@ useInfiniteScroll(
     canLoadMore: () => hasMore.value && !pending.value,
   },
 )
+
+useEventListener(document, 'contextmenu', () => {
+  return false
+})
 
 function selectPicture(picture: SerializeObject<UploadedPicture>) {
   if (isInMultiSelectMode.value) {
@@ -226,7 +230,7 @@ async function handleMultiDownload() {
     <Transition name="slide-in">
       <UiContainer
         v-if="selectedPictures.size > 0"
-        class="fixed right-10 left-10 bottom-16 z-30 pointer-events-none flex gap-6 justify-end"
+        class="fixed right-10 left-10 bottom-16 z-50 pointer-events-none flex gap-6 justify-end pb-[env(safe-area-inset-bottom)]"
       >
         <div class="relative">
           <button

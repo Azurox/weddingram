@@ -37,7 +37,7 @@ async function registerToEvent() {
 </script>
 
 <template>
-  <div class="min-h-screen w-full h-full bg-merino-50 sm:flex sm:items-center sm:justify-center sm:p-4 sm:h-auto">
+  <div class="w-full h-full bg-merino-50 sm:flex sm:items-center sm:justify-center sm:p-4 sm:h-auto">
     <div v-if="event" class="w-full h-full max-w-lg sm:h-auto">
       <div class="bg-white flex flex-col h-full sm:h-auto sm:rounded-2xl sm:shadow-lg overflow-hidden">
         <div class="relative h-[30svh] overflow-hidden">
