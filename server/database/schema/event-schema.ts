@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm'
 import { pgEnum, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import { guests } from './guest-schema'
-import { pictures } from './picture-schema'
+import { medias } from './media-schema'
 
 export const eventState = pgEnum('event_state', ['draft', 'started', 'done'])
 export type EventState = typeof eventState.enumValues[number]
@@ -24,7 +24,7 @@ export const events = pgTable('events', {
 })
 
 export const eventsRelations = relations(events, ({ many }) => ({
-  pictures: many(pictures),
+  medias: many(medias),
   guests: many(guests),
 }))
 

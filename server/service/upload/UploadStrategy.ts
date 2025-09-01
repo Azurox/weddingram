@@ -1,5 +1,5 @@
 import type { events } from '~~/server/database/schema/event-schema'
-import type { pictures } from '~~/server/database/schema/picture-schema'
+import type { pictures } from '~~/server/database/schema/media-schema'
 
 export interface ProcessedFileInfo {
   hash: string

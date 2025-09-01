@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm'
 import { pgTable, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
 import { events } from './event-schema'
-import { pictures } from './picture-schema'
+import { medias } from './media-schema'
 
 export const guests = pgTable('guests', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -12,5 +12,5 @@ export const guests = pgTable('guests', {
 })
 
 export const guestsRelations = relations(guests, ({ many }) => ({
-  pictures: many(pictures),
+  medias: many(medias),
 }))

@@ -2,7 +2,7 @@ import type { events } from '~~/server/database/schema/event-schema'
 import type { ProcessedFileInfo, R2ProcessedFileInfo, UploadResult, UploadStrategy } from './UploadStrategy'
 import crypto from 'node:crypto'
 import { useDrizzle } from '~~/server/database'
-import { pictures } from '~~/server/database/schema/picture-schema'
+import { medias } from '~~/server/database/schema/media-schema'
 import { buildPublicUrl, retrieveFileMetadata } from '~~/server/service/R2Service'
 
 export class R2UploadStrategy implements UploadStrategy {
@@ -22,7 +22,7 @@ export class R2UploadStrategy implements UploadStrategy {
     }
 
     const db = useDrizzle()
-    const pictureRecords: Array<typeof pictures.$inferInsert> = []
+    const pictureRecords: Array<typeof medias.$inferInsert> = []
     const results: UploadResult[] = []
 
     for (const fileInfo of files) {
@@ -59,6 +59,7 @@ export class R2UploadStrategy implements UploadStrategy {
           pictureHash: fileInfo.hash,
           size: uploadResult.actualSize,
           magicDeleteId,
+          thumbnailUrl: uploadResult.url, // Placeholder, replace with actual thumbnail URL if available
         })
 
         results.push({
@@ -78,7 +79,7 @@ export class R2UploadStrategy implements UploadStrategy {
 
     // Batch insert all successfully processed pictures
     if (pictureRecords.length > 0) {
-      await db.insert(pictures).values(pictureRecords).onConflictDoNothing()
+      await db.insert(medias).values(pictureRecords).onConflictDoNothing()
     }
 
     return results

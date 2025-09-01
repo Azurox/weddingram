@@ -3,7 +3,7 @@ import type { events } from '~~/server/database/schema/event-schema'
 import type { ProcessedFileInfo, UploadResult, UploadStrategy } from './UploadStrategy'
 import crypto from 'node:crypto'
 import { useDrizzle } from '~~/server/database'
-import { pictures } from '~~/server/database/schema/picture-schema'
+import { medias } from '~~/server/database/schema/media-schema'
 import { buildUploadedPictureUrl, getUploadedPictureFolder } from '~~/server/service/ImageService'
 
 export class FilesystemUploadStrategy implements UploadStrategy {
@@ -23,7 +23,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
     }
 
     const db = useDrizzle()
-    const pictureRecords: Array<typeof pictures.$inferInsert> = []
+    const pictureRecords: Array<typeof medias.$inferInsert> = []
     const results: UploadResult[] = []
 
     for (const fileInfo of files) {
@@ -52,9 +52,10 @@ export class FilesystemUploadStrategy implements UploadStrategy {
           id: pictureId,
           guestId,
           url,
+          thumbnailUrl: url, // TODO  replace
           capturedAt: fileInfo.capturedAt,
           pictureHash: fileInfo.hash,
-          size: Number(fileInfo.file.size),
+          size: Number((fileInfo.file as ServerFile).size),
           magicDeleteId,
         })
 
@@ -75,7 +76,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
 
     // Batch insert all successfully processed pictures
     if (pictureRecords.length > 0) {
-      await db.insert(pictures).values(pictureRecords).onConflictDoNothing()
+      await db.insert(medias).values(pictureRecords).onConflictDoNothing()
     }
 
     return results

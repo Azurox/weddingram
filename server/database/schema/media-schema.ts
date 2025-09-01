@@ -4,9 +4,10 @@ import { bigint, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-
 import { events } from './event-schema'
 import { guests } from './guest-schema'
 
-export const pictures = pgTable('pictures', {
+export const medias = pgTable('medias', {
   id: uuid('id').primaryKey().defaultRandom(),
   url: text('url').notNull(),
+  thumbnailUrl: text('thumbnail_url').notNull(),
   filename: varchar('filename', { length: 64 }).notNull().unique(), // Technically could be 32 characters + extension length
   size: bigint('size', { mode: 'number' }).notNull(),
   capturedAt: timestamp('captured_at').defaultNow().notNull(),
@@ -15,19 +16,20 @@ export const pictures = pgTable('pictures', {
   guestId: uuid('guest_id').notNull().references(() => guests.id, { onDelete: 'cascade' }),
   eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
   pictureHash: varchar('picture_hash', { length: 64 }).notNull(),
+
   generatedUniquePictureHash: text('generated_unique_picture_hash')
-    .generatedAlwaysAs((): SQL => sql`${pictures.eventId} || ${pictures.pictureHash}`)
+    .generatedAlwaysAs((): SQL => sql`${medias.eventId} || ${medias.pictureHash}`)
     .unique(),
   magicDeleteId: uuid('magic_delete_id').defaultRandom().notNull(),
 })
 
-export const picturesRelations = relations(pictures, ({ one }) => ({
+export const mediasRelations = relations(medias, ({ one }) => ({
   owner: one(guests, {
-    fields: [pictures.guestId],
+    fields: [medias.guestId],
     references: [guests.id],
   }),
   event: one(events, {
-    fields: [pictures.eventId],
+    fields: [medias.eventId],
     references: [events.id],
   }),
 }))

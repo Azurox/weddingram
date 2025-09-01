@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { guests } from '~~/server/database/schema/guest-schema'
-import { pictures } from '~~/server/database/schema/picture-schema'
+import { medias } from '~~/server/database/schema/media-schema'
 import { getEventById } from '~~/server/service/EventService'
 
 const eventIdRouterParam = z.object({
@@ -38,19 +38,19 @@ export default defineEventHandler(async (event) => {
   // Get pictures by IDs that belong to the specified event with guest information
   const picturesList = await db
     .select({
-      id: pictures.id,
-      url: pictures.url,
-      capturedAt: pictures.capturedAt,
-      createdAt: pictures.createdAt,
-      guestId: pictures.guestId,
+      id: medias.id,
+      url: medias.url,
+      capturedAt: medias.capturedAt,
+      createdAt: medias.createdAt,
+      guestId: medias.guestId,
       guestNickname: guests.nickname,
     })
-    .from(pictures)
-    .leftJoin(guests, eq(pictures.guestId, guests.id))
+    .from(medias)
+    .leftJoin(guests, eq(medias.guestId, guests.id))
     .where(
       and(
-        eq(pictures.eventId, eventId),
-        inArray(pictures.id, pictureIds),
+        eq(medias.eventId, eventId),
+        inArray(medias.id, pictureIds),
       ),
     )
 
