@@ -1,3 +1,4 @@
+import type { InquirePayload } from '~~/server/api/events/single/[id]/inquire-upload.post'
 import type { EventBucketType } from '~~/server/database/schema/event-schema'
 import type { FileProcessingResult } from './FileProcessorService'
 
@@ -48,16 +49,12 @@ export class R2UploadStrategy implements ClientUploadStrategy {
 
     // Step 3: Confirm uploads with the server
     const mergedFileInformations = inquiryUploadUrls
-      .filter((info: any) => !info.isDuplicate)
-      .map((info: any) => {
+      .filter(info => !info.isDuplicate)
+      .map((info) => {
         const originalIndex = inquiryUploadUrls.indexOf(info)
         return {
           extension: batch[originalIndex]?.file.name.split('.').pop() || '',
-          contentType: info.payload.contentType,
-          length: info.payload.length,
-          id: info.payload.id,
-          filename: info.payload.filename,
-          hash: info.payload.hash,
+          ...info.payload,
           capturedAt: batch[originalIndex]?.capturedAt,
         }
       })
@@ -70,7 +67,7 @@ export class R2UploadStrategy implements ClientUploadStrategy {
     }) as UploadResult[]
   }
 
-  private async uploadToR2(batch: FileProcessingResult[], inquiryUploadUrls: any[]) {
+  private async uploadToR2(batch: FileProcessingResult[], inquiryUploadUrls: InquirePayload[]) {
     for (let i = 0; i < batch.length; i++) {
       const file = batch[i]?.file
       const uploadData = inquiryUploadUrls[i]

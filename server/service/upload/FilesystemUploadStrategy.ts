@@ -2,9 +2,13 @@ import type { ServerFile } from 'nuxt-file-storage'
 import type { events } from '~~/server/database/schema/event-schema'
 import type { ProcessedFileInfo, UploadResult, UploadStrategy } from './UploadStrategy'
 import crypto from 'node:crypto'
+import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
+import sharp from 'sharp'
 import { useDrizzle } from '~~/server/database'
 import { medias } from '~~/server/database/schema/media-schema'
-import { buildUploadedPictureUrl, getUploadedPictureFolder } from '~~/server/service/ImageService'
+import { buildUploadedPictureUrl, getUploadedPictureFolder, getUploadedThumbnailFolder } from '~~/server/service/ImageService'
+import { THUMBNAIL_PROPERTY } from '~~/shared/utils/constants'
 
 export class FilesystemUploadStrategy implements UploadStrategy {
   requiresPresignedUrls = (): boolean => false
@@ -40,8 +44,12 @@ export class FilesystemUploadStrategy implements UploadStrategy {
           eventId,
           pictureId,
           fileInfo.file as ServerFile,
-          guestId,
-          event,
+        )
+
+        const thumbnailUrl = await this.generateAndSaveThumbnail(
+          eventId,
+          pictureId,
+          fileInfo.file as ServerFile,
         )
 
         const magicDeleteId = crypto.randomUUID()
@@ -52,7 +60,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
           id: pictureId,
           guestId,
           url,
-          thumbnailUrl: url, // TODO  replace
+          thumbnailUrl,
           capturedAt: fileInfo.capturedAt,
           pictureHash: fileInfo.hash,
           size: Number((fileInfo.file as ServerFile).size),
@@ -86,26 +94,29 @@ export class FilesystemUploadStrategy implements UploadStrategy {
     eventId: string,
     pictureId: string,
     file: ServerFile,
-    guestId: string,
-    event: typeof events.$inferSelect,
   ) {
-    if (event.bucketType === 'filesystem') {
-      const filename = await storeFileLocally(
-        file,
-        pictureId,
-        getUploadedPictureFolder(eventId),
-      )
+    const filename = await storeFileLocally(
+      file,
+      pictureId,
+      getUploadedPictureFolder(eventId),
+    )
 
-      return {
-        url: buildUploadedPictureUrl(eventId, filename),
-        filename,
-      }
+    return {
+      url: buildUploadedPictureUrl(eventId, filename),
+      filename,
     }
-    else {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Event with R2 bucket type does not support direct upload',
-      })
-    }
+  }
+
+  private async generateAndSaveThumbnail(eventId: string, pictureId: string, file: ServerFile) {
+    const folderUrl = getUploadedThumbnailFolder(eventId)
+
+    await mkdir(folderUrl, { recursive: true })
+
+    const url = path.join(folderUrl, `${pictureId}.avif`)
+
+    const { binaryString } = parseDataUrl(file.content)
+    await sharp(binaryString).resize(THUMBNAIL_PROPERTY.WIDTH, THUMBNAIL_PROPERTY.HEIGHT, { fit: 'inside' }).avif({ quality: THUMBNAIL_PROPERTY.QUALITY }).toFile(url)
+
+    return url
   }
 }

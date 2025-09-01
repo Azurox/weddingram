@@ -1,5 +1,5 @@
 import type { events } from '~~/server/database/schema/event-schema'
-import type { pictures } from '~~/server/database/schema/media-schema'
+import type { medias } from '~~/server/database/schema/media-schema'
 
 export interface ProcessedFileInfo {
   hash: string
@@ -13,6 +13,7 @@ export interface ProcessedFileInfo {
 export interface R2ProcessedFileInfo extends ProcessedFileInfo {
   id: string
   filename: string
+  filekey: string
 }
 
 export interface UploadResult {
@@ -32,7 +33,7 @@ export interface UploadStrategy {
   requiresPresignedUrls: () => boolean
 }
 
-export interface PictureRecord extends Omit<typeof pictures.$inferInsert, 'id'> {
+export interface PictureRecord extends Omit<typeof medias.$inferInsert, 'id'> {
   id: string
   deleteId: string
 }

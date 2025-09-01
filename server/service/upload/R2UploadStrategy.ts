@@ -97,7 +97,7 @@ export class R2UploadStrategy implements UploadStrategy {
       })
     }
 
-    const fileMetadata = await retrieveFileMetadata(fileInfo.filename)
+    const fileMetadata = await retrieveFileMetadata(fileInfo.filekey)
     if (fileMetadata.Metadata && 'eventid' in fileMetadata.Metadata && 'guestid' in fileMetadata.Metadata) {
       if (fileMetadata.Metadata.eventid !== eventId || fileMetadata.Metadata.guestid !== guestId) {
         throw createError({
@@ -114,7 +114,7 @@ export class R2UploadStrategy implements UploadStrategy {
       return {
         success: true,
         actualSize: Number(fileMetadata.ContentLength),
-        url: buildPublicUrl(fileInfo.filename),
+        url: buildPublicUrl(fileInfo.filekey),
       }
     }
     else {

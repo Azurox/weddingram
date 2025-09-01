@@ -14,6 +14,7 @@ const fileInformationsSchema = z.array(z.union([
     length: z.number(),
     id: z.uuid(),
     filename: z.string().max(64),
+    filekey: z.string().max(256),
     hash: z.string().length(64),
     capturedAt: z.coerce.date().optional(),
   }),
@@ -73,6 +74,7 @@ export default defineEventHandler(async (event) => {
       length: number
       id: string
       filename: string
+      filekey: string
       hash: string
       capturedAt?: Date
     } =>

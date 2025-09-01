@@ -17,6 +17,14 @@ export function getUploadedPictureFolder(eventId: string) {
   return `public/events/${eventId}/pictures/`
 }
 
+export function getUploadedThumbnailFolder(eventId: string) {
+  return `public/events/${eventId}/thumbnails/`
+}
+
 export function buildUploadedPictureUrl(eventId: string, filename: string) {
   return `events/${eventId}/pictures/${filename}`
+}
+
+export function buildUploadedThumbnailUrl(eventId: string, filename: string) {
+  return `events/${eventId}/thumbnails/${filename}`
 }

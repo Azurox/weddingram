@@ -62,6 +62,7 @@ export class PictureUploadOrchestrator {
       length: number
       id: string
       filename: string
+      filekey: string
       capturedAt?: Date
     }>,
   ): R2ProcessedFileInfo[] {
@@ -73,6 +74,8 @@ export class PictureUploadOrchestrator {
       capturedAt: info.capturedAt,
       id: info.id,
       filename: info.filename,
+      filekey: info.filekey,
+      file: info.filekey,
     }))
   }
 
