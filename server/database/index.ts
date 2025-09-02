@@ -2,7 +2,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { events, eventsRelations } from './schema/event-schema'
 import { guests, guestsRelations } from './schema/guest-schema'
-import { pictures, picturesRelations } from './schema/picture-schema'
+import { medias, mediasRelations } from './schema/media-schema'
 
 const config = useRuntimeConfig()
 
@@ -11,8 +11,8 @@ const schema = {
   eventsRelations,
   guests,
   guestsRelations,
-  pictures,
-  picturesRelations,
+  medias,
+  picturesRelations: mediasRelations,
 } as const
 
 type Schema = typeof schema

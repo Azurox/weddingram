@@ -1,7 +1,7 @@
 import { count, eq } from 'drizzle-orm'
 import { useDrizzle } from '../database'
 import { events } from '../database/schema/event-schema'
-import { pictures } from '../database/schema/picture-schema'
+import { medias } from '../database/schema/media-schema'
 
 export async function getRawEventById(eventId: string) {
   return await useDrizzle().query.events.findFirst({
@@ -36,8 +36,8 @@ export async function getRawEventPictureCount(eventId: string) {
   const db = useDrizzle()
   const [result] = await db
     .select({ count: count() })
-    .from(pictures)
-    .where(eq(pictures.eventId, eventId))
+    .from(medias)
+    .where(eq(medias.eventId, eventId))
 
   return result.count
 }

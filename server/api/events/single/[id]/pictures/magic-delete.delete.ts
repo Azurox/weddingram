@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
-import { pictures } from '~~/server/database/schema/picture-schema'
+import { medias } from '~~/server/database/schema/media-schema'
 import { PictureDeletionOrchestrator } from '~~/server/service/deletion/PictureDeletionOrchestrator'
 import { getEventById } from '~~/server/service/EventService'
 
@@ -41,11 +41,11 @@ export default defineEventHandler(async (event) => {
     // Find pictures that match the magic delete IDs and belong to the current user and event
     const picturesToDelete = await db
       .select()
-      .from(pictures)
+      .from(medias)
       .where(
         and(
-          inArray(pictures.magicDeleteId, parsedRequest.magicDeleteIds),
-          eq(pictures.eventId, eventId),
+          inArray(medias.magicDeleteId, parsedRequest.magicDeleteIds),
+          eq(medias.eventId, eventId),
         ),
       )
 
@@ -59,17 +59,17 @@ export default defineEventHandler(async (event) => {
 
     // Delete the pictures from the database first
     const deletedPictures = await db
-      .delete(pictures)
+      .delete(medias)
       .where(
         and(
-          inArray(pictures.magicDeleteId, parsedRequest.magicDeleteIds),
-          eq(pictures.eventId, eventId),
+          inArray(medias.magicDeleteId, parsedRequest.magicDeleteIds),
+          eq(medias.eventId, eventId),
         ),
       )
       .returning({
-        url: pictures.url,
-        filename: pictures.filename,
-        magicDeleteId: pictures.magicDeleteId,
+        url: medias.url,
+        filename: medias.filename,
+        magicDeleteId: medias.magicDeleteId,
       })
 
     const deletionResult = await PictureDeletionOrchestrator.deletePictures(

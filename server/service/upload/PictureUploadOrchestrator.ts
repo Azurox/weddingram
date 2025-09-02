@@ -62,7 +62,9 @@ export class PictureUploadOrchestrator {
       length: number
       id: string
       filename: string
+      filekey: string
       capturedAt?: Date
+      thumbnailFilekey: string
     }>,
   ): R2ProcessedFileInfo[] {
     return fileInformations.map(info => ({
@@ -73,6 +75,9 @@ export class PictureUploadOrchestrator {
       capturedAt: info.capturedAt,
       id: info.id,
       filename: info.filename,
+      filekey: info.filekey,
+      file: info.filekey,
+      thumbnailFilekey: info.thumbnailFilekey,
     }))
   }
 

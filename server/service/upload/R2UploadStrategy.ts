@@ -2,18 +2,18 @@ import type { events } from '~~/server/database/schema/event-schema'
 import type { ProcessedFileInfo, R2ProcessedFileInfo, UploadResult, UploadStrategy } from './UploadStrategy'
 import crypto from 'node:crypto'
 import { useDrizzle } from '~~/server/database'
-import { pictures } from '~~/server/database/schema/picture-schema'
+import { medias } from '~~/server/database/schema/media-schema'
 import { buildPublicUrl, retrieveFileMetadata } from '~~/server/service/R2Service'
 
 export class R2UploadStrategy implements UploadStrategy {
   requiresPresignedUrls = (): boolean => true
 
-  uploadFiles = async (
+  async uploadFiles(
     files: ProcessedFileInfo[],
     eventId: string,
     guestId: string,
     event: typeof events.$inferSelect,
-  ): Promise<UploadResult[]> => {
+  ): Promise<UploadResult[]> {
     if (event.bucketType !== 'R2') {
       throw createError({
         statusCode: 400,
@@ -22,7 +22,7 @@ export class R2UploadStrategy implements UploadStrategy {
     }
 
     const db = useDrizzle()
-    const pictureRecords: Array<typeof pictures.$inferInsert> = []
+    const pictureRecords: Array<typeof medias.$inferInsert> = []
     const results: UploadResult[] = []
 
     for (const fileInfo of files) {
@@ -59,11 +59,13 @@ export class R2UploadStrategy implements UploadStrategy {
           pictureHash: fileInfo.hash,
           size: uploadResult.actualSize,
           magicDeleteId,
+          thumbnailUrl: uploadResult.thumbnailUrl,
         })
 
         results.push({
           id: pictureId,
           url: uploadResult.url,
+          thumbnailUrl: uploadResult.thumbnailUrl,
           deleteId: magicDeleteId,
         })
       }
@@ -78,7 +80,7 @@ export class R2UploadStrategy implements UploadStrategy {
 
     // Batch insert all successfully processed pictures
     if (pictureRecords.length > 0) {
-      await db.insert(pictures).values(pictureRecords).onConflictDoNothing()
+      await db.insert(medias).values(pictureRecords).onConflictDoNothing()
     }
 
     return results
@@ -96,9 +98,12 @@ export class R2UploadStrategy implements UploadStrategy {
       })
     }
 
-    const fileMetadata = await retrieveFileMetadata(fileInfo.filename)
-    if (fileMetadata.Metadata && 'eventid' in fileMetadata.Metadata && 'guestid' in fileMetadata.Metadata) {
-      if (fileMetadata.Metadata.eventid !== eventId || fileMetadata.Metadata.guestid !== guestId) {
+    const [fileMetadata, thumbnailMetadata] = await Promise.all([retrieveFileMetadata(fileInfo.filekey), retrieveFileMetadata(fileInfo.thumbnailFilekey)])
+    if ((fileMetadata.Metadata && 'eventid' in fileMetadata.Metadata && 'guestid' in fileMetadata.Metadata)
+      && (thumbnailMetadata.Metadata && 'eventid' in thumbnailMetadata.Metadata && 'guestid' in thumbnailMetadata.Metadata)
+    ) {
+      if (fileMetadata.Metadata.eventid !== eventId || fileMetadata.Metadata.guestid !== guestId
+        || thumbnailMetadata.Metadata.eventid !== eventId || thumbnailMetadata.Metadata.guestid !== guestId) {
         throw createError({
           statusCode: 400,
           statusMessage: 'File metadata does not match event or guest',
@@ -107,13 +112,17 @@ export class R2UploadStrategy implements UploadStrategy {
             expectedGuestId: guestId,
             actualEventId: fileMetadata.Metadata.eventid,
             actualGuestId: fileMetadata.Metadata.guestid,
+            actualThumbnailEventId: thumbnailMetadata.Metadata.eventid,
+            actualThumbnailGuestId: thumbnailMetadata.Metadata.guestid,
           },
         })
       }
+
       return {
         success: true,
-        actualSize: Number(fileMetadata.ContentLength),
-        url: buildPublicUrl(fileInfo.filename),
+        actualSize: Number((fileMetadata.ContentLength ?? 0) + (thumbnailMetadata.ContentLength ?? 0)),
+        url: buildPublicUrl(fileInfo.filekey),
+        thumbnailUrl: buildPublicUrl(fileInfo.thumbnailFilekey),
       }
     }
     else {

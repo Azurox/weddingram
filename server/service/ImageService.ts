@@ -14,9 +14,17 @@ export function getCoverImageFolder(storageType: AvailableStorageType, eventId: 
 }
 
 export function getUploadedPictureFolder(eventId: string) {
-  return `public/events/${eventId}/pictures/`
+  return `public/events/${eventId}/medias/`
+}
+
+export function getUploadedThumbnailFolder(eventId: string) {
+  return `public/events/${eventId}/thumbnails/`
 }
 
 export function buildUploadedPictureUrl(eventId: string, filename: string) {
-  return `events/${eventId}/pictures/${filename}`
+  return `events/${eventId}/medias/${filename}`
+}
+
+export function buildUploadedThumbnailUrl(eventId: string, filename: string) {
+  return `events/${eventId}/thumbnails/${filename}`
 }

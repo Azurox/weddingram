@@ -66,7 +66,7 @@ async function handleDelete() {
             type="button" @click="toggleSelection(picture.deleteId)"
           >
             <img
-              :src="picture.url" alt=""
+              :src="picture.thumbnailUrl" alt=""
               class="w-full h-full object-cover transition-all duration-200 relative" :class="{
                 'ring-4 ring-merino-400 ring-opacity-70 z-10': selectedPictures.has(picture.deleteId),
                 'group-hover:opacity-90': !selectedPictures.has(picture.deleteId),

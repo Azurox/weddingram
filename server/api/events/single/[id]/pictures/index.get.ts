@@ -2,7 +2,7 @@ import { asc, desc, eq, sql } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { guests } from '~~/server/database/schema/guest-schema'
-import { pictures } from '~~/server/database/schema/picture-schema'
+import { medias } from '~~/server/database/schema/media-schema'
 import { getEventById } from '~~/server/service/EventService'
 
 const eventIdRouterParam = z.object({
@@ -19,6 +19,7 @@ const querySchema = z.object({
 export interface UploadedPicture {
   id: string
   url: string
+  thumbnailUrl: string
   capturedAt: Date
   createdAt: Date
   guestId: string
@@ -44,28 +45,29 @@ export default defineEventHandler(async (event) => {
   const offset = (query.page - 1) * query.limit
 
   // Determine sort column and order
-  const sortColumn = query.sortBy === 'capturedAt' ? pictures.capturedAt : pictures.createdAt
+  const sortColumn = query.sortBy === 'capturedAt' ? medias.capturedAt : medias.createdAt
   const sortOrder = query.sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn)
 
   // Get total count for pagination metadata
   const [totalCount] = await db
     .select({ count: sql<number>`count(*)` })
-    .from(pictures)
-    .where(eq(pictures.eventId, eventId))
+    .from(medias)
+    .where(eq(medias.eventId, eventId))
 
   // Get paginated pictures - ALL pictures for the event with guest information
   const picturesList: UploadedPicture[] = await db
     .select({
-      id: pictures.id,
-      url: pictures.url,
-      capturedAt: pictures.capturedAt,
-      createdAt: pictures.createdAt,
-      guestId: pictures.guestId,
+      id: medias.id,
+      url: medias.url,
+      capturedAt: medias.capturedAt,
+      createdAt: medias.createdAt,
+      guestId: medias.guestId,
       guestNickname: guests.nickname,
+      thumbnailUrl: medias.thumbnailUrl,
     })
-    .from(pictures)
-    .leftJoin(guests, eq(pictures.guestId, guests.id))
-    .where(eq(pictures.eventId, eventId))
+    .from(medias)
+    .leftJoin(guests, eq(medias.guestId, guests.id))
+    .where(eq(medias.eventId, eventId))
     .orderBy(sortOrder)
     .limit(query.limit)
     .offset(offset)

@@ -65,4 +65,19 @@ export class FileProcessorService {
   static async processFiles(files: ClientFile[]): Promise<FileProcessingResult[]> {
     return Promise.all(files.map(file => this.processFile(file)))
   }
+
+  static async generateThumbnail(file: Uint8Array<ArrayBuffer>): Promise<Blob> {
+    const reduce = await import('picsquish')
+
+    const fileAsBlob = new Blob([file])
+
+    const squished = await reduce.squish(fileAsBlob, Math.min(THUMBNAIL_PROPERTY.WIDTH, THUMBNAIL_PROPERTY.HEIGHT), {
+      unsharpAmount: 160,
+      unsharpThreshold: 1,
+      unsharpRadius: 0.6,
+      filter: 'lanczos3',
+    })
+
+    return await squished.toBlob({ type: 'image/jpeg', quality: THUMBNAIL_PROPERTY.QUALITY })
+  }
 }

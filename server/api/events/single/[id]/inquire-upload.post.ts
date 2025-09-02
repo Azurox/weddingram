@@ -3,11 +3,28 @@ import { inArray } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { getEventById } from '~~/server/service/EventService'
+import { buildUploadedPictureUrl, buildUploadedThumbnailUrl } from '~~/server/service/ImageService'
 import { getPresignedUploadUrl } from '~~/server/service/R2Service'
 
 const eventIdRouterParam = z.object({
   id: z.uuid(),
 })
+
+export interface InquirePayload {
+  url: string
+  thumbnailUrl: string
+  isDuplicate: boolean
+  payload: {
+    filename: string
+    filekey: string
+    thumbnailFilekey: string
+    id: string
+    contentType: string
+    length: number
+    hash: string
+  }
+  headers: Record<string, string>
+}
 
 const fileInformationsSchema = z.array(z.object({
   hash: z.string().length(64), // SHA-256 hash of the file
@@ -45,12 +62,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const db = useDrizzle()
-  const signedPayloads: { url: string, isDuplicate: boolean, payload: { filename: string, id: string, contentType: string, length: number, hash: string }, headers: Record<string, string> }[] = []
+  const signedPayloads: InquirePayload[] = []
 
-  const existingPictureHashes = await db.query.pictures.findMany({
-    where: (pictures, { eq, and }) => and(
-      eq(pictures.eventId, eventId),
-      inArray(pictures.pictureHash, fileInformations.map(fi => fi.hash)),
+  const existingPictureHashes = await db.query.medias.findMany({
+    where: (medias, { eq, and }) => and(
+      eq(medias.eventId, eventId),
+      inArray(medias.pictureHash, fileInformations.map(fi => fi.hash)),
     ),
     columns: {
       pictureHash: true,
@@ -63,8 +80,11 @@ export default defineEventHandler(async (event) => {
     if (existingPictureHashes.includes(fileInformation.hash)) {
       signedPayloads.push({
         url: '',
+        thumbnailUrl: '',
         payload: {
           filename: '',
+          filekey: '',
+          thumbnailFilekey: '',
           id: '',
           contentType: fileInformation.contentType,
           length: fileInformation.length,
@@ -79,21 +99,34 @@ export default defineEventHandler(async (event) => {
     const pictureId = crypto.randomUUID()
 
     const filename = `${pictureId}.${fileInformation.extension}`
+    const filekey = buildUploadedPictureUrl(eventId, filename)
+    const thumbnailFilekey = buildUploadedThumbnailUrl(eventId, `${pictureId}.jpeg`)
 
+    // Custom headers to store metadata in R2 object
     const customHeadersForMetadata = {
       'x-amz-meta-eventid': eventId,
       'x-amz-meta-guestid': session.user.id,
     }
 
-    const url = await getPresignedUploadUrl(filename, fileInformation.contentType, fileInformation.length, {
+    const getSignedUrlPromise = getPresignedUploadUrl(filekey, fileInformation.contentType, fileInformation.length, {
       eventId,
       guestId: session.user.id,
     }, customHeadersForMetadata)
 
+    const getSignedThumbnailUrlPromise = getPresignedUploadUrl(thumbnailFilekey, fileInformation.contentType, fileInformation.length, {
+      eventId,
+      guestId: session.user.id,
+    }, customHeadersForMetadata)
+
+    const [url, thumbnailUrl] = await Promise.all([getSignedUrlPromise, getSignedThumbnailUrlPromise])
+
     signedPayloads.push({
       url,
+      thumbnailUrl,
       payload: {
         filename,
+        filekey,
+        thumbnailFilekey,
         id: pictureId,
         contentType: fileInformation.contentType,
         length: fileInformation.length,
