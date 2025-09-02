@@ -8,12 +8,12 @@ import { buildPublicUrl, retrieveFileMetadata } from '~~/server/service/R2Servic
 export class R2UploadStrategy implements UploadStrategy {
   requiresPresignedUrls = (): boolean => true
 
-  uploadFiles = async (
+  async uploadFiles(
     files: ProcessedFileInfo[],
     eventId: string,
     guestId: string,
     event: typeof events.$inferSelect,
-  ): Promise<UploadResult[]> => {
+  ): Promise<UploadResult[]> {
     if (event.bucketType !== 'R2') {
       throw createError({
         statusCode: 400,
@@ -59,12 +59,13 @@ export class R2UploadStrategy implements UploadStrategy {
           pictureHash: fileInfo.hash,
           size: uploadResult.actualSize,
           magicDeleteId,
-          thumbnailUrl: uploadResult.url, // Placeholder, replace with actual thumbnail URL if available
+          thumbnailUrl: uploadResult.thumbnailUrl,
         })
 
         results.push({
           id: pictureId,
           url: uploadResult.url,
+          thumbnailUrl: uploadResult.thumbnailUrl,
           deleteId: magicDeleteId,
         })
       }
@@ -97,9 +98,12 @@ export class R2UploadStrategy implements UploadStrategy {
       })
     }
 
-    const fileMetadata = await retrieveFileMetadata(fileInfo.filekey)
-    if (fileMetadata.Metadata && 'eventid' in fileMetadata.Metadata && 'guestid' in fileMetadata.Metadata) {
-      if (fileMetadata.Metadata.eventid !== eventId || fileMetadata.Metadata.guestid !== guestId) {
+    const [fileMetadata, thumbnailMetadata] = await Promise.all([retrieveFileMetadata(fileInfo.filekey), retrieveFileMetadata(fileInfo.thumbnailFilekey)])
+    if ((fileMetadata.Metadata && 'eventid' in fileMetadata.Metadata && 'guestid' in fileMetadata.Metadata)
+      && (thumbnailMetadata.Metadata && 'eventid' in thumbnailMetadata.Metadata && 'guestid' in thumbnailMetadata.Metadata)
+    ) {
+      if (fileMetadata.Metadata.eventid !== eventId || fileMetadata.Metadata.guestid !== guestId
+        || thumbnailMetadata.Metadata.eventid !== eventId || thumbnailMetadata.Metadata.guestid !== guestId) {
         throw createError({
           statusCode: 400,
           statusMessage: 'File metadata does not match event or guest',
@@ -108,13 +112,17 @@ export class R2UploadStrategy implements UploadStrategy {
             expectedGuestId: guestId,
             actualEventId: fileMetadata.Metadata.eventid,
             actualGuestId: fileMetadata.Metadata.guestid,
+            actualThumbnailEventId: thumbnailMetadata.Metadata.eventid,
+            actualThumbnailGuestId: thumbnailMetadata.Metadata.guestid,
           },
         })
       }
+
       return {
         success: true,
-        actualSize: Number(fileMetadata.ContentLength),
+        actualSize: Number((fileMetadata.ContentLength ?? 0) + (thumbnailMetadata.ContentLength ?? 0)),
         url: buildPublicUrl(fileInfo.filekey),
+        thumbnailUrl: buildPublicUrl(fileInfo.thumbnailFilekey),
       }
     }
     else {

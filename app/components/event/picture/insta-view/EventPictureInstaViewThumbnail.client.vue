@@ -71,7 +71,7 @@ function triggerHeartAnimation() {
       <div v-if="allowDoubleTap && showHeartAnimation" class="absolute z-10 inset-0 w-full h-full flex items-center justify-center pointer-events-none">
         <svg class="size-[20svh] stroke-1 stroke-almond-300 text-almond-300 animate-heart-like" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Google Material Icons by Material Design Authors - https://github.com/material-icons/material-icons/blob/master/LICENSE --><path fill="currentColor" d="m12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54z" /></svg>
       </div>
-      <img :src="picture.url" alt="" class="w-full h-auto object-contain max-h-[60svh] bg-almond-500/5" @click="allowDoubleTap ? onImageClick() : undefined">
+      <img :src="picture.thumbnailUrl" alt="" class="w-full h-auto object-contain max-h-[60svh] bg-almond-500/5" @click="allowDoubleTap ? onImageClick() : undefined">
     </div>
     <div class="flex gap-2 px-2 items-baseline mt-1">
       <button class="group transition-transform active:scale-95" :aria-pressed="isInFavorite(picture.id)" type="button" @click="toggleFavorite(picture.id)">

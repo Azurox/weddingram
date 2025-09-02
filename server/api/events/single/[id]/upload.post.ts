@@ -1,4 +1,5 @@
 import type { ServerFile } from 'nuxt-file-storage'
+import type { UploadResult } from '~/services/UploadStrategyService'
 import z from 'zod'
 import { getEventById } from '~~/server/service/EventService'
 import { PictureUploadOrchestrator } from '~~/server/service/upload/PictureUploadOrchestrator'
@@ -15,6 +16,7 @@ const fileInformationsSchema = z.array(z.union([
     id: z.uuid(),
     filename: z.string().max(64),
     filekey: z.string().max(256),
+    thumbnailFilekey: z.string().max(256),
     hash: z.string().length(64),
     capturedAt: z.coerce.date().optional(),
   }),
@@ -24,7 +26,7 @@ const fileInformationsSchema = z.array(z.union([
   }).strict(),
 ])).max(5)
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler<Promise<UploadResult[]>>(async (event) => {
   const { id: eventId } = await getValidatedRouterParams(event, eventIdRouterParam.parse)
   const { files, filesInformations } = await readBody<{ files: ServerFile[] | undefined, filesInformations: unknown }>(event)
   const session = await requireUserSession(event)
@@ -75,6 +77,7 @@ export default defineEventHandler(async (event) => {
       id: string
       filename: string
       filekey: string
+      thumbnailFilekey: string
       hash: string
       capturedAt?: Date
     } =>

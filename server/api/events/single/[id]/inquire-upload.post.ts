@@ -3,14 +3,28 @@ import { inArray } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { getEventById } from '~~/server/service/EventService'
-import { buildUploadedPictureUrl } from '~~/server/service/ImageService'
+import { buildUploadedPictureUrl, buildUploadedThumbnailUrl } from '~~/server/service/ImageService'
 import { getPresignedUploadUrl } from '~~/server/service/R2Service'
 
 const eventIdRouterParam = z.object({
   id: z.uuid(),
 })
 
-export interface InquirePayload { url: string, isDuplicate: boolean, payload: { filename: string, filekey: string, id: string, contentType: string, length: number, hash: string }, headers: Record<string, string> }
+export interface InquirePayload {
+  url: string
+  thumbnailUrl: string
+  isDuplicate: boolean
+  payload: {
+    filename: string
+    filekey: string
+    thumbnailFilekey: string
+    id: string
+    contentType: string
+    length: number
+    hash: string
+  }
+  headers: Record<string, string>
+}
 
 const fileInformationsSchema = z.array(z.object({
   hash: z.string().length(64), // SHA-256 hash of the file
@@ -66,9 +80,11 @@ export default defineEventHandler(async (event) => {
     if (existingPictureHashes.includes(fileInformation.hash)) {
       signedPayloads.push({
         url: '',
+        thumbnailUrl: '',
         payload: {
           filename: '',
           filekey: '',
+          thumbnailFilekey: '',
           id: '',
           contentType: fileInformation.contentType,
           length: fileInformation.length,
@@ -84,6 +100,7 @@ export default defineEventHandler(async (event) => {
 
     const filename = `${pictureId}.${fileInformation.extension}`
     const filekey = buildUploadedPictureUrl(eventId, filename)
+    const thumbnailFilekey = buildUploadedThumbnailUrl(eventId, `${pictureId}.jpeg`)
 
     // Custom headers to store metadata in R2 object
     const customHeadersForMetadata = {
@@ -91,16 +108,25 @@ export default defineEventHandler(async (event) => {
       'x-amz-meta-guestid': session.user.id,
     }
 
-    const url = await getPresignedUploadUrl(filekey, fileInformation.contentType, fileInformation.length, {
+    const getSignedUrlPromise = getPresignedUploadUrl(filekey, fileInformation.contentType, fileInformation.length, {
       eventId,
       guestId: session.user.id,
     }, customHeadersForMetadata)
 
+    const getSignedThumbnailUrlPromise = getPresignedUploadUrl(thumbnailFilekey, fileInformation.contentType, fileInformation.length, {
+      eventId,
+      guestId: session.user.id,
+    }, customHeadersForMetadata)
+
+    const [url, thumbnailUrl] = await Promise.all([getSignedUrlPromise, getSignedThumbnailUrlPromise])
+
     signedPayloads.push({
       url,
+      thumbnailUrl,
       payload: {
         filename,
         filekey,
+        thumbnailFilekey,
         id: pictureId,
         contentType: fileInformation.contentType,
         length: fileInformation.length,

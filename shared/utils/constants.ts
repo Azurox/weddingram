@@ -1,5 +1,5 @@
 export const THUMBNAIL_PROPERTY = {
-  WIDTH: 1200,
-  HEIGHT: 1200,
+  WIDTH: 600,
+  HEIGHT: 600,
   QUALITY: 80,
 } as const

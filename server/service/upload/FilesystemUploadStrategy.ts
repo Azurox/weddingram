@@ -46,7 +46,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
           fileInfo.file as ServerFile,
         )
 
-        const thumbnailUrl = await this.generateAndSaveThumbnail(
+        const { url: thumbnailUrl, size: thumbnailSize } = await this.generateAndSaveThumbnail(
           eventId,
           pictureId,
           fileInfo.file as ServerFile,
@@ -63,13 +63,14 @@ export class FilesystemUploadStrategy implements UploadStrategy {
           thumbnailUrl,
           capturedAt: fileInfo.capturedAt,
           pictureHash: fileInfo.hash,
-          size: Number((fileInfo.file as ServerFile).size),
+          size: Number((fileInfo.file as ServerFile).size + thumbnailSize),
           magicDeleteId,
         })
 
         results.push({
           id: pictureId,
           url,
+          thumbnailUrl,
           deleteId: magicDeleteId,
         })
       }
@@ -115,8 +116,11 @@ export class FilesystemUploadStrategy implements UploadStrategy {
     const url = path.join(folderUrl, `${pictureId}.avif`)
 
     const { binaryString } = parseDataUrl(file.content)
-    await sharp(binaryString).resize(THUMBNAIL_PROPERTY.WIDTH, THUMBNAIL_PROPERTY.HEIGHT, { fit: 'inside' }).avif({ quality: THUMBNAIL_PROPERTY.QUALITY }).toFile(url)
+    const thumbnailFile = await sharp(binaryString).resize(THUMBNAIL_PROPERTY.WIDTH, THUMBNAIL_PROPERTY.HEIGHT, { fit: 'inside' }).avif({ quality: THUMBNAIL_PROPERTY.QUALITY }).toFile(url)
 
-    return url
+    return {
+      url,
+      size: thumbnailFile.size,
+    }
   }
 }

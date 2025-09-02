@@ -3,6 +3,7 @@ import { useStorage } from '@vueuse/core'
 export interface UploadedPicture {
   id: string
   url: string
+  thumbnailUrl: string
   deleteId: string
 }
 

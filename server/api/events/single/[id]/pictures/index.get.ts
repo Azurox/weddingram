@@ -19,6 +19,7 @@ const querySchema = z.object({
 export interface UploadedPicture {
   id: string
   url: string
+  thumbnailUrl: string
   capturedAt: Date
   createdAt: Date
   guestId: string
@@ -62,6 +63,7 @@ export default defineEventHandler(async (event) => {
       createdAt: medias.createdAt,
       guestId: medias.guestId,
       guestNickname: guests.nickname,
+      thumbnailUrl: medias.thumbnailUrl,
     })
     .from(medias)
     .leftJoin(guests, eq(medias.guestId, guests.id))

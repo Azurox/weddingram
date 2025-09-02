@@ -28,6 +28,7 @@
     "nuxt-file-storage": "^0.3.0",
     "nuxt-toast": "^1.1.4",
     "pg": "^8.16.3",
+    "picsquish": "^0.3.0",
     "qr-creator": "^1.0.0",
     "sharp": "^0.34.3",
     "tailwindcss": "^4.1.11",

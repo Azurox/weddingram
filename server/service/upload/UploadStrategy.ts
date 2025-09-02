@@ -14,11 +14,13 @@ export interface R2ProcessedFileInfo extends ProcessedFileInfo {
   id: string
   filename: string
   filekey: string
+  thumbnailFilekey: string
 }
 
 export interface UploadResult {
   id: string
   url: string
+  thumbnailUrl: string
   deleteId: string
 }
 
