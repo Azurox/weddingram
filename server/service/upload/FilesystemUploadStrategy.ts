@@ -7,7 +7,7 @@ import path from 'node:path'
 import sharp from 'sharp'
 import { useDrizzle } from '~~/server/database'
 import { medias } from '~~/server/database/schema/media-schema'
-import { buildUploadedPictureUrl, getUploadedPictureFolder, getUploadedThumbnailFolder } from '~~/server/service/ImageService'
+import { buildFilesystemUploadedPictureUrl, buildFilesystemUploadedThumbnailUrl, getUploadedPictureFolder, getUploadedThumbnailFolder } from '~~/server/service/ImageService'
 import { THUMBNAIL_PROPERTY } from '~~/shared/utils/constants'
 
 export class FilesystemUploadStrategy implements UploadStrategy {
@@ -39,39 +39,51 @@ export class FilesystemUploadStrategy implements UploadStrategy {
       }
 
       try {
-        const pictureId = crypto.randomUUID()
+        const mediaId = crypto.randomUUID()
         const { url, filename } = await this.savePictureInLocalBucket(
           eventId,
-          pictureId,
+          mediaId,
           fileInfo.file as ServerFile,
         )
 
-        const { url: thumbnailUrl, size: thumbnailSize } = await this.generateAndSaveThumbnail(
-          eventId,
-          pictureId,
-          fileInfo.file as ServerFile,
-        )
+        const isVideo = (fileInfo.contentType || '').startsWith('video/')
+
+        let thumbnailUrl: string | null = null
+        let thumbnailSize = 0
+
+        if (!isVideo) {
+          const thumbnailResult = await this.generateAndSaveThumbnail(
+            eventId,
+            mediaId,
+            fileInfo.file as ServerFile,
+            isVideo,
+          )
+          thumbnailUrl = thumbnailResult.url
+          thumbnailSize = thumbnailResult.size
+        }
 
         const magicDeleteId = crypto.randomUUID()
 
         pictureRecords.push({
           filename,
           eventId,
-          id: pictureId,
+          id: mediaId,
           guestId,
           url,
-          thumbnailUrl,
+          thumbnailUrl: thumbnailUrl ?? null,
           capturedAt: fileInfo.capturedAt,
           pictureHash: fileInfo.hash,
           size: Number((fileInfo.file as ServerFile).size + thumbnailSize),
           magicDeleteId,
+          mediaType: isVideo ? 'video' : 'picture',
         })
 
         results.push({
-          id: pictureId,
+          id: mediaId,
           url,
           thumbnailUrl,
           deleteId: magicDeleteId,
+          isVideo,
         })
       }
       catch (error) {
@@ -103,23 +115,28 @@ export class FilesystemUploadStrategy implements UploadStrategy {
     )
 
     return {
-      url: buildUploadedPictureUrl(eventId, filename),
+      url: buildFilesystemUploadedPictureUrl(eventId, filename),
       filename,
     }
   }
 
-  private async generateAndSaveThumbnail(eventId: string, pictureId: string, file: ServerFile) {
+  private async generateAndSaveThumbnail(eventId: string, pictureId: string, file: ServerFile, isVideo: boolean) {
+    if (isVideo) {
+      return { url: 'TODO', size: 0 } // TODO
+    }
+
     const folderUrl = getUploadedThumbnailFolder(eventId)
+    const filename = `${pictureId}.avif`
 
     await mkdir(folderUrl, { recursive: true })
 
-    const url = path.join(folderUrl, `${pictureId}.avif`)
+    const url = path.join(folderUrl, filename)
 
     const { binaryString } = parseDataUrl(file.content)
     const thumbnailFile = await sharp(binaryString).resize(THUMBNAIL_PROPERTY.WIDTH, THUMBNAIL_PROPERTY.HEIGHT, { fit: 'inside' }).avif({ quality: THUMBNAIL_PROPERTY.QUALITY }).toFile(url)
 
     return {
-      url,
+      url: buildFilesystemUploadedThumbnailUrl(eventId, filename),
       size: thumbnailFile.size,
     }
   }

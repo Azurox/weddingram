@@ -21,10 +21,18 @@ export function getUploadedThumbnailFolder(eventId: string) {
   return `public/events/${eventId}/thumbnails/`
 }
 
-export function buildUploadedPictureUrl(eventId: string, filename: string) {
+export function buildR2UploadedPictureUrl(eventId: string, filename: string) {
   return `events/${eventId}/medias/${filename}`
 }
 
-export function buildUploadedThumbnailUrl(eventId: string, filename: string) {
+export function buildFilesystemUploadedPictureUrl(eventId: string, filename: string) {
+  return `/events/${eventId}/medias/${filename}`
+}
+
+export function buildR2UploadedThumbnailUrl(eventId: string, filename: string) {
   return `events/${eventId}/thumbnails/${filename}`
+}
+
+export function buildFilesystemUploadedThumbnailUrl(eventId: string, filename: string) {
+  return `/events/${eventId}/thumbnails/${filename}`
 }

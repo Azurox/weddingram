@@ -65,14 +65,26 @@ async function handleDelete() {
             class="relative aspect-square cursor-pointer group appearance-none border-0 rounded-none bg-none"
             type="button" @click="toggleSelection(picture.deleteId)"
           >
-            <img
-              :src="picture.thumbnailUrl" alt=""
-              class="w-full h-full object-cover transition-all duration-200 relative" :class="{
-                'ring-4 ring-merino-400 ring-opacity-70 z-10': selectedPictures.has(picture.deleteId),
-                'group-hover:opacity-90': !selectedPictures.has(picture.deleteId),
-                'animate-pulse': selectedPictures.has(picture.deleteId) && isDeleting,
-              }" loading="lazy"
-            >
+            <template v-if="picture.isVideo === false && picture.thumbnailUrl">
+              <img
+                :src="picture.thumbnailUrl" alt=""
+                class="w-full h-full object-cover transition-all duration-200 relative" :class="{
+                  'ring-4 ring-merino-400 ring-opacity-70 z-10': selectedPictures.has(picture.deleteId),
+                  'group-hover:opacity-90': !selectedPictures.has(picture.deleteId),
+                  'animate-pulse': selectedPictures.has(picture.deleteId) && isDeleting,
+                }" loading="lazy"
+              >
+            </template>
+            <template v-else-if="picture.isVideo">
+              <video
+                :src="picture.url" class="w-full h-full object-cover transition-all duration-200 relative" :class="{
+                  'ring-4 ring-merino-400 ring-opacity-70 z-10': selectedPictures.has(picture.deleteId),
+                  'group-hover:opacity-90': !selectedPictures.has(picture.deleteId),
+                  'animate-pulse': selectedPictures.has(picture.deleteId) && isDeleting,
+                }" muted playsinline preload="metadata"
+              />
+              <span class="absolute bottom-2 right-2 left-2 text-center text-white text-shadow-neutral-500 text-shadow-md tracking-wider z-10">video</span>
+            </template>
             <div
               v-if="isSelectionMode"
               class="absolute z-20 top-2 right-2 w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center transition-all duration-200"

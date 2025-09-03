@@ -46,7 +46,7 @@ export class PictureUploadOrchestrator {
       return {
         hash: fileInfo.hash,
         extension: this.getFileExtension(file.name || ''),
-        contentType: file.type || 'application/octet-stream',
+        contentType: file.type || 'unknown',
         length: Number(file.size),
         capturedAt: fileInfo.capturedAt,
         file,
@@ -64,7 +64,7 @@ export class PictureUploadOrchestrator {
       filename: string
       filekey: string
       capturedAt?: Date
-      thumbnailFilekey: string
+      thumbnailFilekey: string | null
     }>,
   ): R2ProcessedFileInfo[] {
     return fileInformations.map(info => ({
@@ -76,7 +76,7 @@ export class PictureUploadOrchestrator {
       id: info.id,
       filename: info.filename,
       filekey: info.filekey,
-      file: info.filekey,
+      file: undefined,
       thumbnailFilekey: info.thumbnailFilekey,
     }))
   }

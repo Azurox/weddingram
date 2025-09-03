@@ -3,7 +3,7 @@ import { inArray } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { getEventById } from '~~/server/service/EventService'
-import { buildUploadedPictureUrl, buildUploadedThumbnailUrl } from '~~/server/service/ImageService'
+import { buildR2UploadedPictureUrl, buildR2UploadedThumbnailUrl } from '~~/server/service/ImageService'
 import { getPresignedUploadUrl } from '~~/server/service/R2Service'
 
 const eventIdRouterParam = z.object({
@@ -12,12 +12,12 @@ const eventIdRouterParam = z.object({
 
 export interface InquirePayload {
   url: string
-  thumbnailUrl: string
+  thumbnailUrl: string | null
   isDuplicate: boolean
   payload: {
     filename: string
     filekey: string
-    thumbnailFilekey: string
+    thumbnailFilekey: string | null
     id: string
     contentType: string
     length: number
@@ -99,8 +99,11 @@ export default defineEventHandler(async (event) => {
     const pictureId = crypto.randomUUID()
 
     const filename = `${pictureId}.${fileInformation.extension}`
-    const filekey = buildUploadedPictureUrl(eventId, filename)
-    const thumbnailFilekey = buildUploadedThumbnailUrl(eventId, `${pictureId}.jpeg`)
+    const filekey = buildR2UploadedPictureUrl(eventId, filename)
+    const isVideoUpload = fileInformation.contentType.startsWith('video/')
+    const thumbnailFilekey = isVideoUpload ? null : buildR2UploadedThumbnailUrl(eventId, `${pictureId}.jpeg`)
+
+    // For videos, we might not have a thumbnail
 
     // Custom headers to store metadata in R2 object
     const customHeadersForMetadata = {
@@ -113,10 +116,12 @@ export default defineEventHandler(async (event) => {
       guestId: session.user.id,
     }, customHeadersForMetadata)
 
-    const getSignedThumbnailUrlPromise = getPresignedUploadUrl(thumbnailFilekey, fileInformation.contentType, fileInformation.length, {
-      eventId,
-      guestId: session.user.id,
-    }, customHeadersForMetadata)
+    const getSignedThumbnailUrlPromise = thumbnailFilekey === null
+      ? Promise.resolve(null)
+      : getPresignedUploadUrl(thumbnailFilekey, fileInformation.contentType, fileInformation.length, {
+          eventId,
+          guestId: session.user.id,
+        }, customHeadersForMetadata)
 
     const [url, thumbnailUrl] = await Promise.all([getSignedUrlPromise, getSignedThumbnailUrlPromise])
 

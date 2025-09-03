@@ -14,14 +14,15 @@ export interface R2ProcessedFileInfo extends ProcessedFileInfo {
   id: string
   filename: string
   filekey: string
-  thumbnailFilekey: string
+  thumbnailFilekey: string | null
 }
 
 export interface UploadResult {
   id: string
   url: string
-  thumbnailUrl: string
+  thumbnailUrl: string | null
   deleteId: string
+  isVideo: boolean
 }
 
 export interface UploadStrategy {
