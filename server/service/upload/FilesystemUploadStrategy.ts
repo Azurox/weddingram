@@ -56,7 +56,6 @@ export class FilesystemUploadStrategy implements UploadStrategy {
             eventId,
             mediaId,
             fileInfo.file as ServerFile,
-            isVideo,
           )
           thumbnailUrl = thumbnailResult.url
           thumbnailSize = thumbnailResult.size
@@ -120,11 +119,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
     }
   }
 
-  private async generateAndSaveThumbnail(eventId: string, pictureId: string, file: ServerFile, isVideo: boolean) {
-    if (isVideo) {
-      return { url: 'TODO', size: 0 } // TODO
-    }
-
+  private async generateAndSaveThumbnail(eventId: string, pictureId: string, file: ServerFile) {
     const folderUrl = getUploadedThumbnailFolder(eventId)
     const filename = `${pictureId}.avif`
 
