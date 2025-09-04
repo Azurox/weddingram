@@ -4,6 +4,7 @@ import crypto from 'node:crypto'
 import { useDrizzle } from '~~/server/database'
 import { medias } from '~~/server/database/schema/media-schema'
 import { buildPublicUrl, retrieveFileMetadata } from '~~/server/service/R2Service'
+import { isMediaVideoContent } from '../ImageService'
 
 export class R2UploadStrategy implements UploadStrategy {
   requiresPresignedUrls = (): boolean => true
@@ -28,6 +29,7 @@ export class R2UploadStrategy implements UploadStrategy {
     for (const fileInfo of files) {
       try {
         const uploadResult = await this.verifyPictureWasUploaded(fileInfo, eventId, guestId)
+        const isVideo = isMediaVideoContent(fileInfo.contentType)
 
         if (!uploadResult.success) {
           throw createError({
@@ -59,7 +61,8 @@ export class R2UploadStrategy implements UploadStrategy {
           pictureHash: fileInfo.hash,
           size: uploadResult.actualSize,
           magicDeleteId,
-          thumbnailUrl: uploadResult.thumbnailUrl,
+          thumbnailUrl: uploadResult.thumbnailUrl ?? null,
+          mediaType: isVideo ? 'video' : 'picture',
         })
 
         results.push({
@@ -67,6 +70,7 @@ export class R2UploadStrategy implements UploadStrategy {
           url: uploadResult.url,
           thumbnailUrl: uploadResult.thumbnailUrl,
           deleteId: magicDeleteId,
+          isVideo,
         })
       }
       catch (error) {
@@ -98,12 +102,12 @@ export class R2UploadStrategy implements UploadStrategy {
       })
     }
 
-    const [fileMetadata, thumbnailMetadata] = await Promise.all([retrieveFileMetadata(fileInfo.filekey), retrieveFileMetadata(fileInfo.thumbnailFilekey)])
+    const [fileMetadata, thumbnailMetadata] = await Promise.all([retrieveFileMetadata(fileInfo.filekey), fileInfo.thumbnailFilekey ? retrieveFileMetadata(fileInfo.thumbnailFilekey) : Promise.resolve(null)])
     if ((fileMetadata.Metadata && 'eventid' in fileMetadata.Metadata && 'guestid' in fileMetadata.Metadata)
-      && (thumbnailMetadata.Metadata && 'eventid' in thumbnailMetadata.Metadata && 'guestid' in thumbnailMetadata.Metadata)
+      && (thumbnailMetadata === null || (thumbnailMetadata !== null && thumbnailMetadata.Metadata && 'eventid' in thumbnailMetadata.Metadata && 'guestid' in thumbnailMetadata.Metadata))
     ) {
       if (fileMetadata.Metadata.eventid !== eventId || fileMetadata.Metadata.guestid !== guestId
-        || thumbnailMetadata.Metadata.eventid !== eventId || thumbnailMetadata.Metadata.guestid !== guestId) {
+        || (thumbnailMetadata !== null && (thumbnailMetadata.Metadata?.eventid !== eventId || thumbnailMetadata.Metadata?.guestid !== guestId))) {
         throw createError({
           statusCode: 400,
           statusMessage: 'File metadata does not match event or guest',
@@ -112,17 +116,18 @@ export class R2UploadStrategy implements UploadStrategy {
             expectedGuestId: guestId,
             actualEventId: fileMetadata.Metadata.eventid,
             actualGuestId: fileMetadata.Metadata.guestid,
-            actualThumbnailEventId: thumbnailMetadata.Metadata.eventid,
-            actualThumbnailGuestId: thumbnailMetadata.Metadata.guestid,
+            actualThumbnailEventId: thumbnailMetadata?.Metadata?.eventid,
+            actualThumbnailGuestId: thumbnailMetadata?.Metadata?.guestid,
           },
         })
       }
 
       return {
         success: true,
-        actualSize: Number((fileMetadata.ContentLength ?? 0) + (thumbnailMetadata.ContentLength ?? 0)),
+        actualSize: Number((fileMetadata.ContentLength ?? 0) + (thumbnailMetadata?.ContentLength ?? 0)),
         url: buildPublicUrl(fileInfo.filekey),
-        thumbnailUrl: buildPublicUrl(fileInfo.thumbnailFilekey),
+        thumbnailUrl: fileInfo.thumbnailFilekey ? buildPublicUrl(fileInfo.thumbnailFilekey) : null,
+        isVideo: fileMetadata.ContentType && isMediaVideoContent(fileMetadata.ContentType),
       }
     }
     else {

@@ -7,7 +7,8 @@ export interface UploadResult {
   id: string
   url: string
   deleteId: string
-  thumbnailUrl: string
+  thumbnailUrl: string | null
+  isVideo: boolean
 }
 
 export interface ClientUploadStrategy {
@@ -20,6 +21,10 @@ export class FilesystemUploadStrategy implements ClientUploadStrategy {
       hash: item.hash,
       capturedAt: item.capturedAt,
     }))
+
+    if (filesInformations.length === 0) {
+      return []
+    }
 
     return await $fetch(`/api/events/single/${eventId}/upload`, {
       method: 'POST',
@@ -34,6 +39,7 @@ export class FilesystemUploadStrategy implements ClientUploadStrategy {
 export class R2UploadStrategy implements ClientUploadStrategy {
   async upload(batch: FileProcessingResult[], eventId: string): Promise<UploadResult[]> {
     // Step 1: Inquire for upload URLs
+
     const inquiryInformations = batch.map(item => ({
       hash: item.hash,
       extension: item.file.name.split('.').pop() || '',
@@ -61,6 +67,11 @@ export class R2UploadStrategy implements ClientUploadStrategy {
         }
       })
 
+    if (mergedFileInformations.length === 0) {
+      // All files were duplicates, nothing to confirm
+      return []
+    }
+
     return await $fetch(`/api/events/single/${eventId}/upload`, {
       method: 'POST',
       body: {
@@ -85,18 +96,27 @@ export class R2UploadStrategy implements ClientUploadStrategy {
         const arrayBuffer = await response.arrayBuffer()
         const uint8Array = new Uint8Array(arrayBuffer)
 
-        // When using a presigned URL like R2, front-end needs to generate the thumbnail itself
-        const thumbnailBlob = await FileProcessorService.generateThumbnail(uint8Array)
+        // Prepare upload promises for parallel execution
+        const uploadPromises: Promise<unknown>[] = [
+          $fetch(uploadData.url, {
+            method: 'PUT',
+            headers: uploadData.headers,
+            body: uint8Array,
+          }),
+        ]
 
-        Promise.all([$fetch(uploadData.url, {
-          method: 'PUT',
-          headers: uploadData.headers,
-          body: uint8Array,
-        }), $fetch(uploadData.thumbnailUrl, {
-          method: 'PUT',
-          headers: uploadData.headers,
-          body: thumbnailBlob,
-        })])
+        // Add thumbnail upload if required
+        if (uploadData.thumbnailUrl) {
+          const thumbnailUploadPromise = FileProcessorService.generateThumbnail(uint8Array)
+            .then(thumbnailBlob => $fetch(uploadData.thumbnailUrl!, {
+              method: 'PUT',
+              headers: uploadData.headers,
+              body: thumbnailBlob,
+            }))
+          uploadPromises.push(thumbnailUploadPromise)
+        }
+
+        await Promise.all(uploadPromises)
       }
     }
   }

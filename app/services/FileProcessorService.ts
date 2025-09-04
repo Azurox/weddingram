@@ -32,6 +32,12 @@ export class FileProcessorService {
    */
   static async extractExifData(file: ClientFile) {
     try {
+      if (file.type && !file.type.startsWith('image/')) {
+        return {
+          capturedAt: new Date(file.lastModified), // Fallback to last modified date for non-image files. Extracting EXIF from videos is not supported.
+        }
+      }
+
       const tags = await ExifReader.load(file.content as string)
 
       let capturedAt = new Date()

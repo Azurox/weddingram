@@ -1,20 +1,14 @@
+import type { UploadResult } from '~/services/UploadStrategyService'
 import { useStorage } from '@vueuse/core'
-
-export interface UploadedPicture {
-  id: string
-  url: string
-  thumbnailUrl: string
-  deleteId: string
-}
 
 export function useUploadedPictureStorage() {
   const route = useRoute()
   const uuid = computed(() => route.params.uuid as string)
   const storageKey = computed(() => `uploadedPictures_${uuid.value}`)
 
-  const uploadedPictures = useStorage<UploadedPicture[]>(storageKey, [])
+  const uploadedPictures = useStorage<UploadResult[]>(storageKey, [])
 
-  function addUploadedPictures(newPictures: UploadedPicture[]) {
+  function addUploadedPictures(newPictures: UploadResult[]) {
     uploadedPictures.value.push(...newPictures)
   }
 
@@ -28,7 +22,7 @@ export function useUploadedPictureStorage() {
     uploadedPictures.value = []
   }
 
-  function getUploadedPictureByDeleteId(deleteId: string): UploadedPicture | undefined {
+  function getUploadedPictureByDeleteId(deleteId: string): UploadResult | undefined {
     return uploadedPictures.value.find(picture => picture.deleteId === deleteId)
   }
 

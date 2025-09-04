@@ -1,4 +1,5 @@
 import type { ServerFile } from 'nuxt-file-storage'
+import type { ProcessedFileInfo } from '~~/server/service/upload/UploadStrategy'
 import type { UploadResult } from '~/services/UploadStrategyService'
 import z from 'zod'
 import { getEventById } from '~~/server/service/EventService'
@@ -16,7 +17,7 @@ const fileInformationsSchema = z.array(z.union([
     id: z.uuid(),
     filename: z.string().max(64),
     filekey: z.string().max(256),
-    thumbnailFilekey: z.string().max(256),
+    thumbnailFilekey: z.string().max(256).nullable(),
     hash: z.string().length(64),
     capturedAt: z.coerce.date().optional(),
   }),
@@ -49,7 +50,7 @@ export default defineEventHandler<Promise<UploadResult[]>>(async (event) => {
     })
   }
 
-  let processedFiles
+  let processedFiles: ProcessedFileInfo[]
 
   if (weddingEvent.bucketType === 'filesystem' && files) {
     // This only happens when user uploads files directly.
@@ -77,7 +78,7 @@ export default defineEventHandler<Promise<UploadResult[]>>(async (event) => {
       id: string
       filename: string
       filekey: string
-      thumbnailFilekey: string
+      thumbnailFilekey: string | null
       hash: string
       capturedAt?: Date
     } =>

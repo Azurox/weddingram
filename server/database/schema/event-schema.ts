@@ -19,7 +19,7 @@ export const events = pgTable('events', {
   closeDate: timestamp('close_date').notNull(), // When the event should be closed and all pictures removed
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-  bucketType: eventBucketType('bucket_type').notNull().default('R2').notNull(),
+  bucketType: eventBucketType('bucket_type').default('R2').notNull(),
   bucketUri: varchar('bucket_uri', { length: 2048 }).notNull(),
 })
 

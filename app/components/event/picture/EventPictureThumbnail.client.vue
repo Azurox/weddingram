@@ -71,13 +71,25 @@ function handleTouchEnd() {
 
 <template>
   <div class="relative overflow-hidden select-none">
-    <button class="appearance-none border-0 rounded-none bg-none w-full h-full block" @touchstart="handleTouchStart" @click="handleTouchEnd" @mousedown="handleTouchStart" @contextmenu.prevent>
-      <img
-        ref="imageRef" :src="picture.thumbnailUrl" class="w-full aspect-square object-cover pointer-events-none" :class="[
-          isLoaded ? 'scale-100 opacity-100' : 'scale-105 opacity-0',
-          shouldAnimate ? 'transition-all duration-700' : '',
-        ]" :data-loaded="isLoaded" @load="handleImageLoad"
-      >
+    <button class="appearance-none border-0 rounded-none bg-none w-full h-full block relative" @touchstart="handleTouchStart" @click="handleTouchEnd" @mousedown="handleTouchStart" @contextmenu.prevent>
+      <template v-if="picture.mediaType === 'picture'">
+        <img
+          ref="imageRef" :src="picture.thumbnailUrl" class="w-full h-full aspect-square object-cover pointer-events-none" :class="[
+            isLoaded ? 'scale-100 opacity-100' : 'scale-105 opacity-0',
+            shouldAnimate ? 'transition-all duration-700' : '',
+          ]" :data-loaded="isLoaded" @load="handleImageLoad"
+        >
+      </template>
+      <template v-else-if="picture.mediaType === 'video'">
+        <video class="w-full aspect-square object-cover pointer-events-none bg-almond-500/5" :data-loaded="isLoaded" muted playsinline preload="metadata" @loadeddata="handleImageLoad">
+          <source :src="picture.url" type="video/mp4">
+          Your browser does not support this video.
+        </video>
+
+        <div class="absolute inset-0 flex items-center justify-center bg-black/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="text-white drop-shadow-2xl drop-shadow-white size-12" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M8 17.175V6.825q0-.425.3-.713t.7-.287q.125 0 .263.037t.262.113l8.15 5.175q.225.15.338.375t.112.475t-.112.475t-.338.375l-8.15 5.175q-.125.075-.262.113T9 18.175q-.4 0-.7-.288t-.3-.712" /></svg>
+        </div>
+      </template>
     </button>
     <ClientOnly>
       <button

@@ -1,3 +1,4 @@
+import type { mediaType, MediaType } from '~~/server/database/schema/media-schema'
 import { asc, desc, eq, sql } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
@@ -19,11 +20,12 @@ const querySchema = z.object({
 export interface UploadedPicture {
   id: string
   url: string
-  thumbnailUrl: string
+  thumbnailUrl: string | null
   capturedAt: Date
   createdAt: Date
   guestId: string
   guestNickname: string | null
+  mediaType: MediaType
 }
 
 export default defineEventHandler(async (event) => {
@@ -64,6 +66,7 @@ export default defineEventHandler(async (event) => {
       guestId: medias.guestId,
       guestNickname: guests.nickname,
       thumbnailUrl: medias.thumbnailUrl,
+      mediaType: medias.mediaType,
     })
     .from(medias)
     .leftJoin(guests, eq(medias.guestId, guests.id))
