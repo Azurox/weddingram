@@ -22,6 +22,10 @@ export class FilesystemUploadStrategy implements ClientUploadStrategy {
       capturedAt: item.capturedAt,
     }))
 
+    if (filesInformations.length === 0) {
+      return []
+    }
+
     return await $fetch(`/api/events/single/${eventId}/upload`, {
       method: 'POST',
       body: {
@@ -63,6 +67,11 @@ export class R2UploadStrategy implements ClientUploadStrategy {
         }
       })
 
+    if (mergedFileInformations.length === 0) {
+      // All files were duplicates, nothing to confirm
+      return []
+    }
+
     return await $fetch(`/api/events/single/${eventId}/upload`, {
       method: 'POST',
       body: {
@@ -87,22 +96,27 @@ export class R2UploadStrategy implements ClientUploadStrategy {
         const arrayBuffer = await response.arrayBuffer()
         const uint8Array = new Uint8Array(arrayBuffer)
 
-        let thumbnailPromise: Promise<unknown> | undefined
-
-        if (uploadData.thumbnailUrl) {
-          const thumbnailBlob = await FileProcessorService.generateThumbnail(uint8Array)
-          thumbnailPromise = $fetch(uploadData.thumbnailUrl, {
+        // Prepare upload promises for parallel execution
+        const uploadPromises: Promise<unknown>[] = [
+          $fetch(uploadData.url, {
             method: 'PUT',
             headers: uploadData.headers,
-            body: thumbnailBlob,
-          })
+            body: uint8Array,
+          }),
+        ]
+
+        // Add thumbnail upload if required
+        if (uploadData.thumbnailUrl) {
+          const thumbnailUploadPromise = FileProcessorService.generateThumbnail(uint8Array)
+            .then(thumbnailBlob => $fetch(uploadData.thumbnailUrl!, {
+              method: 'PUT',
+              headers: uploadData.headers,
+              body: thumbnailBlob,
+            }))
+          uploadPromises.push(thumbnailUploadPromise)
         }
 
-        await Promise.all([$fetch(uploadData.url, {
-          method: 'PUT',
-          headers: uploadData.headers,
-          body: uint8Array,
-        }), thumbnailPromise])
+        await Promise.all(uploadPromises)
       }
     }
   }

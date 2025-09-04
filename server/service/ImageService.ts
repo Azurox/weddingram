@@ -36,3 +36,7 @@ export function buildR2UploadedThumbnailUrl(eventId: string, filename: string) {
 export function buildFilesystemUploadedThumbnailUrl(eventId: string, filename: string) {
   return `/events/${eventId}/thumbnails/${filename}`
 }
+
+export function isMediaVideoContent(contentType: string) {
+  return contentType.startsWith('video/')
+}

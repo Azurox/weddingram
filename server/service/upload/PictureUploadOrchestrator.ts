@@ -46,7 +46,7 @@ export class PictureUploadOrchestrator {
       return {
         hash: fileInfo.hash,
         extension: this.getFileExtension(file.name || ''),
-        contentType: file.type || 'unknown',
+        contentType: file.type || 'application/octet-stream',
         length: Number(file.size),
         capturedAt: fileInfo.capturedAt,
         file,
@@ -76,7 +76,6 @@ export class PictureUploadOrchestrator {
       id: info.id,
       filename: info.filename,
       filekey: info.filekey,
-      file: undefined,
       thumbnailFilekey: info.thumbnailFilekey,
     }))
   }

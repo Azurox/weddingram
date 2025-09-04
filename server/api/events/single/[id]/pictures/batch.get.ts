@@ -45,6 +45,7 @@ export default defineEventHandler(async (event) => {
       guestId: medias.guestId,
       guestNickname: guests.nickname,
       thumbnailUrl: medias.thumbnailUrl,
+      mediaType: medias.mediaType,
     })
     .from(medias)
     .leftJoin(guests, eq(medias.guestId, guests.id))

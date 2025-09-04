@@ -7,7 +7,7 @@ import path from 'node:path'
 import sharp from 'sharp'
 import { useDrizzle } from '~~/server/database'
 import { medias } from '~~/server/database/schema/media-schema'
-import { buildFilesystemUploadedPictureUrl, buildFilesystemUploadedThumbnailUrl, getUploadedPictureFolder, getUploadedThumbnailFolder } from '~~/server/service/ImageService'
+import { buildFilesystemUploadedPictureUrl, buildFilesystemUploadedThumbnailUrl, getUploadedPictureFolder, getUploadedThumbnailFolder, isMediaVideoContent } from '~~/server/service/ImageService'
 import { THUMBNAIL_PROPERTY } from '~~/shared/utils/constants'
 
 export class FilesystemUploadStrategy implements UploadStrategy {
@@ -46,7 +46,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
           fileInfo.file as ServerFile,
         )
 
-        const isVideo = (fileInfo.contentType || '').startsWith('video/')
+        const isVideo = isMediaVideoContent(fileInfo.contentType)
 
         let thumbnailUrl: string | null = null
         let thumbnailSize = 0

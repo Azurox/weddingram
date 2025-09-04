@@ -4,6 +4,7 @@ import crypto from 'node:crypto'
 import { useDrizzle } from '~~/server/database'
 import { medias } from '~~/server/database/schema/media-schema'
 import { buildPublicUrl, retrieveFileMetadata } from '~~/server/service/R2Service'
+import { isMediaVideoContent } from '../ImageService'
 
 export class R2UploadStrategy implements UploadStrategy {
   requiresPresignedUrls = (): boolean => true
@@ -28,7 +29,7 @@ export class R2UploadStrategy implements UploadStrategy {
     for (const fileInfo of files) {
       try {
         const uploadResult = await this.verifyPictureWasUploaded(fileInfo, eventId, guestId)
-        const isVideo = fileInfo.contentType.startsWith('video/')
+        const isVideo = isMediaVideoContent(fileInfo.contentType)
 
         if (!uploadResult.success) {
           throw createError({
@@ -126,7 +127,7 @@ export class R2UploadStrategy implements UploadStrategy {
         actualSize: Number((fileMetadata.ContentLength ?? 0) + (thumbnailMetadata?.ContentLength ?? 0)),
         url: buildPublicUrl(fileInfo.filekey),
         thumbnailUrl: fileInfo.thumbnailFilekey ? buildPublicUrl(fileInfo.thumbnailFilekey) : null,
-        isVideo: fileInfo.thumbnailFilekey === null,
+        isVideo: fileMetadata.ContentType && isMediaVideoContent(fileMetadata.ContentType),
       }
     }
     else {

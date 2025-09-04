@@ -3,7 +3,7 @@ import { inArray } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { getEventById } from '~~/server/service/EventService'
-import { buildR2UploadedPictureUrl, buildR2UploadedThumbnailUrl } from '~~/server/service/ImageService'
+import { buildR2UploadedPictureUrl, buildR2UploadedThumbnailUrl, isMediaVideoContent } from '~~/server/service/ImageService'
 import { getPresignedUploadUrl } from '~~/server/service/R2Service'
 
 const eventIdRouterParam = z.object({
@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
 
     const filename = `${pictureId}.${fileInformation.extension}`
     const filekey = buildR2UploadedPictureUrl(eventId, filename)
-    const isVideoUpload = fileInformation.contentType.startsWith('video/')
+    const isVideoUpload = isMediaVideoContent(fileInformation.contentType)
     const thumbnailFilekey = isVideoUpload ? null : buildR2UploadedThumbnailUrl(eventId, `${pictureId}.jpeg`)
 
     // For videos, we might not have a thumbnail

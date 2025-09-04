@@ -20,7 +20,7 @@ const querySchema = z.object({
 export interface UploadedPicture {
   id: string
   url: string
-  thumbnailUrl: string
+  thumbnailUrl: string | null
   capturedAt: Date
   createdAt: Date
   guestId: string
