@@ -1,35 +1,9 @@
 import type { InquirePayload } from '~~/server/api/events/single/[id]/inquire-upload.post'
 import type { EventBucketType } from '~~/server/database/schema/event-schema'
+import type { BatchUploadResult, DuplicateMedia, InvalidFile, UploadedMedia } from '~~/shared/types/BatchUploadResult'
 import type { FileProcessingResult } from './FileProcessorService'
 import { FetchError } from 'ofetch'
 import { FileProcessorService } from './FileProcessorService'
-
-export interface UploadedMedia {
-  id: string
-  url: string
-  deleteId: string
-  thumbnailUrl: string | null
-  isVideo: boolean
-}
-
-export interface DuplicateMedia {
-  name: string
-  hash: string
-  file: string
-  contentType: string
-}
-
-export interface InvalidFile {
-  name: string
-  contentType: string
-  reason: string
-}
-
-export interface BatchUploadResult {
-  uploadedMedia: UploadedMedia[]
-  duplicateMedia: DuplicateMedia[]
-  invalidFiles: InvalidFile[]
-}
 
 export interface ClientUploadStrategy {
   upload: (batch: FileProcessingResult[], eventId: string) => Promise<BatchUploadResult>
@@ -51,7 +25,7 @@ export class FilesystemUploadStrategy implements ClientUploadStrategy {
     }
 
     try {
-      const uploadedMedia = await $fetch(`/api/events/single/${eventId}/upload`, {
+      const batchResult = await $fetch(`/api/events/single/${eventId}/upload`, {
         method: 'POST',
         body: {
           files: batch.map(item => item.file),
@@ -59,11 +33,7 @@ export class FilesystemUploadStrategy implements ClientUploadStrategy {
         },
       })
 
-      return {
-        uploadedMedia,
-        duplicateMedia: [],
-        invalidFiles: [],
-      }
+      return batchResult
     }
     catch (error: unknown) {
       // Rethrow other possible errors
@@ -80,8 +50,9 @@ export class FilesystemUploadStrategy implements ClientUploadStrategy {
         throw error
       }
 
-      errorPayload.duplicates.forEach((dup: { hash: string }, index: number) => {
-        const file = batch[index]
+      errorPayload.duplicates.forEach((dup: { hash: string }) => {
+        const file = batch.find(f => f.hash === dup.hash)
+
         if (file && typeof file.file.content === 'string') {
           duplicateMedia.push({
             name: file.file.name,
@@ -99,6 +70,7 @@ export class FilesystemUploadStrategy implements ClientUploadStrategy {
             name: file.file.name,
             contentType: file.file.type,
             reason: invalid.reason,
+            hash: invalid.hash,
           })
         }
       })
@@ -155,6 +127,7 @@ export class R2UploadStrategy implements ClientUploadStrategy {
           name: originalFile.file.name,
           contentType: result.payload.contentType,
           reason: 'Invalid file type',
+          hash: result.payload.hash,
         })
       }
     })
@@ -183,7 +156,7 @@ export class R2UploadStrategy implements ClientUploadStrategy {
             filesInformations: mergedFileInformations,
           },
         })
-        uploadedMedia = response as UploadedMedia[]
+        uploadedMedia = response.uploadedMedia
       }
       catch (error) {
         console.error('Failed to confirm uploads:', error)
@@ -210,6 +183,7 @@ export class R2UploadStrategy implements ClientUploadStrategy {
 
       if (uploadData?.isInvalid) {
         console.warn(`File ${file?.name} is invalid, skipping upload. Verify extension and content type. Type: ${file?.type}`)
+        continue
       }
 
       if (file && uploadData && 'url' in uploadData && typeof file.content === 'string') {

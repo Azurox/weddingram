@@ -1,3 +1,5 @@
+import { FetchError } from 'ofetch'
+
 export function usePictureDelete() {
   const route = useRoute()
   const uuid = computed(() => route.params.uuid as string)
@@ -29,7 +31,19 @@ export function usePictureDelete() {
       }
     }
     catch (error) {
-      console.error('Failed to delete pictures:', error)
+      if (error instanceof FetchError) {
+        const typedError = error as FetchError<{ data?: { requestedIds: string[] } }>
+
+        if (typedError.data?.data?.requestedIds) {
+          removeUploadedPictures(typedError.data.data.requestedIds)
+          return {
+            success: false,
+            deleteCount: 0,
+            deletedIds: [],
+          }
+        }
+      }
+
       throw error
     }
     finally {

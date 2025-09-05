@@ -1,6 +1,6 @@
 import type { ServerFile } from 'nuxt-file-storage'
 import type { events } from '~~/server/database/schema/event-schema'
-import type { ProcessedFileInfo, R2ProcessedFileInfo, UploadResult } from './UploadStrategy'
+import type { ProcessedFileInfo, R2ProcessedFileInfo } from './UploadStrategy'
 import { clearEventPictureCountCache } from '~~/server/service/EventService'
 import { UploadStrategyFactory } from './UploadStrategyFactory'
 
@@ -10,13 +10,13 @@ export class PictureUploadOrchestrator {
     eventId: string,
     guestId: string,
     event: typeof events.$inferSelect,
-  ): Promise<UploadResult[]> {
+  ): Promise<BatchUploadResult> {
     const strategy = UploadStrategyFactory.create(event.bucketType)
 
     const results = await strategy.uploadFiles(files, eventId, guestId, event)
 
     // Clear cache for event picture count
-    if (results.length > 0) {
+    if (results.uploadedMedia.length > 0) {
       await clearEventPictureCountCache(eventId)
     }
 

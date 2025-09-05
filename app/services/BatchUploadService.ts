@@ -1,5 +1,5 @@
 import type { FileProcessingResult } from './FileProcessorService'
-import type { BatchUploadResult, ClientUploadStrategy } from './UploadStrategyService'
+import type { ClientUploadStrategy } from './UploadStrategyService'
 
 export interface BatchUploadOptions {
   batchSize?: number
@@ -28,7 +28,6 @@ export class BatchUploadService {
 
       try {
         const batchResult = await strategy.upload(batch, eventId)
-
         finalResult.uploadedMedia.push(...batchResult.uploadedMedia)
         finalResult.duplicateMedia.push(...batchResult.duplicateMedia)
         finalResult.invalidFiles.push(...batchResult.invalidFiles)

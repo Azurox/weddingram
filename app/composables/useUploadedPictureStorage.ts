@@ -1,4 +1,3 @@
-import type { UploadedMedia } from '~/services/UploadStrategyService'
 import { useStorage } from '@vueuse/core'
 
 export function useUploadedPictureStorage() {

@@ -46,26 +46,23 @@ export function useGlobalPictureUploader() {
       )
 
       // Convert the result to the format expected by the UI
+
       const uploadResultDetails: UploadResultDetails = {
         successCount: result.uploadedMedia.length,
         duplicateFiles: result.duplicateMedia.map(dup => ({
-          name: dup.name,
+          name: dup.name ?? 'Unknown',
           hash: dup.hash,
-          file: dup.file,
-          contentType: dup.contentType,
+          file: dup.file ?? '',
+          contentType: dup.contentType ?? 'application/octet-stream',
         })),
         invalidFiles: result.invalidFiles.map(invalid => ({
-          name: invalid.name,
-          contentType: invalid.contentType,
+          name: invalid.name ?? 'Unknown',
+          contentType: invalid.contentType ?? 'application/octet-stream',
           reason: invalid.reason,
         })),
       }
 
-      // Set the detailed upload results only if we have useful information to show
-      if (uploadResultDetails.duplicateFiles.length > 0 || uploadResultDetails.invalidFiles.length > 0) {
-        uploadState.setUploadResult(uploadResultDetails)
-      }
-
+      uploadState.setUploadResult(uploadResultDetails)
       uploadState.complete()
     }
     catch (error: unknown) {

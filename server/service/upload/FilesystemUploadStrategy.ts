@@ -1,7 +1,8 @@
 import type { ServerFile } from 'nuxt-file-storage'
 import type { events } from '~~/server/database/schema/event-schema'
-import type { ProcessedFileInfo, UploadResult, UploadStrategy } from './UploadStrategy'
-import crypto from 'node:crypto'
+import type { BatchUploadResult } from '~~/shared/types/BatchUploadResult'
+import type { ProcessedFileInfo, UploadStrategy } from './UploadStrategy'
+import crypto, { hash } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
@@ -9,6 +10,7 @@ import { useDrizzle } from '~~/server/database'
 import { medias } from '~~/server/database/schema/media-schema'
 import { buildFilesystemUploadedPictureUrl, buildFilesystemUploadedThumbnailUrl, getUploadedPictureFolder, getUploadedThumbnailFolder, isMediaVideoContent, isValidMediaContent } from '~~/server/service/ImageService'
 import { THUMBNAIL_PROPERTY } from '~~/shared/utils/constants'
+import { DeletionStrategyFactory } from '../deletion/DeletionStrategyFactory'
 
 export class FilesystemUploadStrategy implements UploadStrategy {
   requiresPresignedUrls = (): boolean => false
@@ -18,7 +20,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
     eventId: string,
     guestId: string,
     event: typeof events.$inferSelect,
-  ): Promise<UploadResult[]> => {
+  ): Promise<BatchUploadResult> => {
     if (event.bucketType !== 'filesystem') {
       throw createError({
         statusCode: 400,
@@ -27,7 +29,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
     }
 
     const db = useDrizzle()
-    const pictureRecords: Array<typeof medias.$inferInsert> = []
+    let pictureRecords: Array<typeof medias.$inferInsert> = []
     const fileInfoMap = new Map<string, { fileInfo: ProcessedFileInfo, mediaId: string, url: string, thumbnailUrl: string | null, deleteId: string, isVideo: boolean }>()
 
     const invalidFiles: Array<{ hash: string, reason: string }> = []
@@ -47,18 +49,6 @@ export class FilesystemUploadStrategy implements UploadStrategy {
       }
 
       validFiles.push(fileInfo)
-    }
-
-    if (invalidFiles.length > 0) {
-      throw createError({
-        statusCode: 422,
-        statusMessage: 'Some files are invalid',
-        data: {
-          duplicates: [],
-          invalidFiles,
-          uploaded: [],
-        },
-      })
     }
 
     for (const fileInfo of validFiles) {
@@ -121,56 +111,76 @@ export class FilesystemUploadStrategy implements UploadStrategy {
       }
       catch (error) {
         console.error('Error processing file:', error)
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'Failed to process file',
-        })
+        invalidFiles.push({ hash: fileInfo.hash, reason: 'Valid file, but not able to process it' })
+        pictureRecords = pictureRecords.filter(f => f.pictureHash !== fileInfo.hash)
       }
     }
 
+    const result: BatchUploadResult = {
+      duplicateMedia: [],
+      invalidFiles: [],
+      uploadedMedia: [],
+    }
+
+    try {
     // Batch insert all successfully processed pictures with conflict handling
-    const insertedRecords = await db.insert(medias).values(pictureRecords).onConflictDoNothing().returning({
-      id: medias.id,
-      pictureHash: medias.pictureHash,
-    })
+      const insertedRecords = await db.insert(medias).values(pictureRecords).onConflictDoNothing().returning({
+        id: medias.id,
+        pictureHash: medias.pictureHash,
+      })
 
-    const results: UploadResult[] = []
-    const insertedHashes = new Set(insertedRecords.map(record => record.pictureHash))
+      const insertedHashes = new Set(insertedRecords.map(record => record.pictureHash))
 
-    for (const record of insertedRecords) {
-      const mappedData = fileInfoMap.get(record.pictureHash)
-      if (mappedData) {
-        results.push({
-          id: mappedData.mediaId,
-          url: mappedData.url,
-          thumbnailUrl: mappedData.thumbnailUrl,
-          deleteId: mappedData.deleteId,
-          isVideo: mappedData.isVideo,
-        })
+      const duplicateHashes = files
+        .map(f => f.hash)
+        .filter(hash => !insertedHashes.has(hash))
+
+      result.duplicateMedia = duplicateHashes.map((hash) => {
+        return {
+          hash,
+        }
+      })
+
+      for (const record of insertedRecords) {
+        const mappedData = fileInfoMap.get(record.pictureHash)
+        if (mappedData) {
+          result.uploadedMedia.push({
+            id: mappedData.mediaId,
+            url: mappedData.url,
+            thumbnailUrl: mappedData.thumbnailUrl,
+            deleteId: mappedData.deleteId,
+            isVideo: mappedData.isVideo,
+          })
+        }
       }
     }
+    catch (error) {
+      console.error('Error inserting records into database:', error)
 
-    const duplicateHashes = files
-      .map(f => f.hash)
-      .filter(hash => !insertedHashes.has(hash))
+      const strategy = DeletionStrategyFactory.create(event.bucketType)
 
-    if (duplicateHashes.length > 0) {
-      const duplicates = duplicateHashes.map(hash => ({
-        hash,
+      // Process deletions in parallel for better performance
+      try {
+        const deletePromises = pictureRecords.map(async (picture) => {
+          await strategy.deleteFile(picture.filename, event.id)
+        })
+        await Promise.allSettled(deletePromises)
+      }
+      catch (cleanupError) {
+        console.error('Error during cleanup of uploaded files after DB failure:', cleanupError)
+      }
+
+      result.invalidFiles.push(...pictureRecords.map((pr) => {
+        const mappedData = fileInfoMap.get(pr.pictureHash)
+        return {
+          hash: pr.pictureHash,
+          contentType: mappedData?.fileInfo.contentType,
+          reason: 'Valid file, but unable to save record',
+        }
       }))
-
-      throw createError({
-        statusCode: 422,
-        statusMessage: 'Some files are duplicates',
-        data: {
-          duplicates,
-          invalidFiles: [],
-          uploaded: results,
-        },
-      })
     }
 
-    return results
+    return result
   }
 
   private async savePictureInLocalBucket(
