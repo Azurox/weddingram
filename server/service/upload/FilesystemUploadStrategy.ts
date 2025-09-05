@@ -1,14 +1,16 @@
 import type { ServerFile } from 'nuxt-file-storage'
 import type { events } from '~~/server/database/schema/event-schema'
-import type { ProcessedFileInfo, UploadResult, UploadStrategy } from './UploadStrategy'
-import crypto from 'node:crypto'
+import type { BatchUploadResult } from '~~/shared/types/BatchUploadResult'
+import type { ProcessedFileInfo, UploadStrategy } from './UploadStrategy'
+import crypto, { hash } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
 import { useDrizzle } from '~~/server/database'
 import { medias } from '~~/server/database/schema/media-schema'
-import { buildFilesystemUploadedPictureUrl, buildFilesystemUploadedThumbnailUrl, getUploadedPictureFolder, getUploadedThumbnailFolder, isMediaVideoContent } from '~~/server/service/ImageService'
+import { buildFilesystemUploadedPictureUrl, buildFilesystemUploadedThumbnailUrl, getUploadedPictureFolder, getUploadedThumbnailFolder, isMediaVideoContent, isValidMediaContent } from '~~/server/service/ImageService'
 import { THUMBNAIL_PROPERTY } from '~~/shared/utils/constants'
+import { DeletionStrategyFactory } from '../deletion/DeletionStrategyFactory'
 
 export class FilesystemUploadStrategy implements UploadStrategy {
   requiresPresignedUrls = (): boolean => false
@@ -18,7 +20,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
     eventId: string,
     guestId: string,
     event: typeof events.$inferSelect,
-  ): Promise<UploadResult[]> => {
+  ): Promise<BatchUploadResult> => {
     if (event.bucketType !== 'filesystem') {
       throw createError({
         statusCode: 400,
@@ -27,10 +29,29 @@ export class FilesystemUploadStrategy implements UploadStrategy {
     }
 
     const db = useDrizzle()
-    const pictureRecords: Array<typeof medias.$inferInsert> = []
-    const results: UploadResult[] = []
+    let pictureRecords: Array<typeof medias.$inferInsert> = []
+    const fileInfoMap = new Map<string, { fileInfo: ProcessedFileInfo, mediaId: string, url: string, thumbnailUrl: string | null, deleteId: string, isVideo: boolean }>()
+
+    const invalidFiles: Array<{ hash: string, reason: string }> = []
+    const validFiles: ProcessedFileInfo[] = []
 
     for (const fileInfo of files) {
+      if (!fileInfo.file) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'File data is required for filesystem uploads',
+        })
+      }
+
+      if (!isValidMediaContent(fileInfo.contentType)) {
+        invalidFiles.push({ hash: fileInfo.hash, reason: 'Invalid file type' })
+        continue
+      }
+
+      validFiles.push(fileInfo)
+    }
+
+    for (const fileInfo of validFiles) {
       if (!fileInfo.file) {
         throw createError({
           statusCode: 400,
@@ -63,7 +84,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
 
         const magicDeleteId = crypto.randomUUID()
 
-        pictureRecords.push({
+        const recordToInsert = {
           filename,
           eventId,
           id: mediaId,
@@ -75,10 +96,13 @@ export class FilesystemUploadStrategy implements UploadStrategy {
           size: Number((fileInfo.file as ServerFile).size + thumbnailSize),
           magicDeleteId,
           mediaType: isVideo ? 'video' : 'picture',
-        })
+        } as const
 
-        results.push({
-          id: mediaId,
+        pictureRecords.push(recordToInsert)
+
+        fileInfoMap.set(fileInfo.hash, {
+          fileInfo,
+          mediaId,
           url,
           thumbnailUrl,
           deleteId: magicDeleteId,
@@ -87,19 +111,76 @@ export class FilesystemUploadStrategy implements UploadStrategy {
       }
       catch (error) {
         console.error('Error processing file:', error)
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'Failed to process file',
-        })
+        invalidFiles.push({ hash: fileInfo.hash, reason: 'Valid file, but not able to process it' })
+        pictureRecords = pictureRecords.filter(f => f.pictureHash !== fileInfo.hash)
       }
     }
 
-    // Batch insert all successfully processed pictures
-    if (pictureRecords.length > 0) {
-      await db.insert(medias).values(pictureRecords).onConflictDoNothing()
+    const result: BatchUploadResult = {
+      duplicateMedia: [],
+      invalidFiles: [],
+      uploadedMedia: [],
     }
 
-    return results
+    try {
+    // Batch insert all successfully processed pictures with conflict handling
+      const insertedRecords = await db.insert(medias).values(pictureRecords).onConflictDoNothing().returning({
+        id: medias.id,
+        pictureHash: medias.pictureHash,
+      })
+
+      const insertedHashes = new Set(insertedRecords.map(record => record.pictureHash))
+
+      const duplicateHashes = files
+        .map(f => f.hash)
+        .filter(hash => !insertedHashes.has(hash))
+
+      result.duplicateMedia = duplicateHashes.map((hash) => {
+        return {
+          hash,
+        }
+      })
+
+      for (const record of insertedRecords) {
+        const mappedData = fileInfoMap.get(record.pictureHash)
+        if (mappedData) {
+          result.uploadedMedia.push({
+            id: mappedData.mediaId,
+            url: mappedData.url,
+            thumbnailUrl: mappedData.thumbnailUrl,
+            deleteId: mappedData.deleteId,
+            isVideo: mappedData.isVideo,
+          })
+        }
+      }
+    }
+    catch (error) {
+      console.error('Error inserting records into database:', error)
+
+      const strategy = DeletionStrategyFactory.create(event.bucketType)
+
+      // Process deletions in parallel for better performance
+      try {
+        const deletePromises = pictureRecords.map(async (picture) => {
+          await strategy.deleteFile(picture.filename, event.id)
+        })
+        await Promise.allSettled(deletePromises)
+      }
+      catch (cleanupError) {
+        console.error('Error during cleanup of uploaded files after DB failure:', cleanupError)
+      }
+
+      result.invalidFiles.push(...pictureRecords.map((pr) => {
+        const mappedData = fileInfoMap.get(pr.pictureHash)
+        return {
+          hash: pr.pictureHash,
+          contentType: mappedData?.fileInfo.contentType,
+          reason: 'Valid file, but unable to save record',
+        }
+      }))
+    }
+
+    return result
   }
 
   private async savePictureInLocalBucket(

@@ -29,35 +29,34 @@ export default defineEventHandler(async (event) => {
 
   const db = useDrizzle()
 
+  const weddingEvent = await getEventById(eventId)
+  if (!weddingEvent) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Event not found',
+    })
+  }
+
+  // Find pictures that match the magic delete IDs and belong to the current user and event
+  const picturesToDelete = await db
+    .select()
+    .from(medias)
+    .where(
+      and(
+        inArray(medias.magicDeleteId, parsedRequest.magicDeleteIds),
+        eq(medias.eventId, eventId),
+      ),
+    )
+
+  if (picturesToDelete.length === 0) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'No pictures found with the provided delete IDs',
+      data: { requestedIds: parsedRequest.magicDeleteIds },
+    })
+  }
+
   try {
-    const weddingEvent = await getEventById(eventId)
-    if (!weddingEvent) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Event not found',
-      })
-    }
-
-    // Find pictures that match the magic delete IDs and belong to the current user and event
-    const picturesToDelete = await db
-      .select()
-      .from(medias)
-      .where(
-        and(
-          inArray(medias.magicDeleteId, parsedRequest.magicDeleteIds),
-          eq(medias.eventId, eventId),
-        ),
-      )
-
-    if (picturesToDelete.length === 0) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'No pictures found with the provided delete IDs',
-        data: { requestedIds: parsedRequest.magicDeleteIds },
-      })
-    }
-
-    // Delete the pictures from the database first
     const deletedPictures = await db
       .delete(medias)
       .where(
@@ -89,7 +88,7 @@ export default defineEventHandler(async (event) => {
     }
   }
   catch (error) {
-    console.error('Error deleting pictures:', error)
+    console.error('Error during picture deletion:', error)
     throw createError({
       statusCode: 500,
       statusMessage: 'Failed to delete pictures',

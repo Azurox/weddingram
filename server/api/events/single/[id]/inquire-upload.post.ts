@@ -3,7 +3,7 @@ import { inArray } from 'drizzle-orm'
 import z from 'zod'
 import { useDrizzle } from '~~/server/database'
 import { getEventById } from '~~/server/service/EventService'
-import { buildR2UploadedPictureUrl, buildR2UploadedThumbnailUrl, isMediaVideoContent } from '~~/server/service/ImageService'
+import { buildR2UploadedPictureUrl, buildR2UploadedThumbnailUrl, isMediaVideoContent, isValidMediaContent } from '~~/server/service/ImageService'
 import { getPresignedUploadUrl } from '~~/server/service/R2Service'
 
 const eventIdRouterParam = z.object({
@@ -14,6 +14,7 @@ export interface InquirePayload {
   url: string
   thumbnailUrl: string | null
   isDuplicate: boolean
+  isInvalid: boolean
   payload: {
     filename: string
     filekey: string
@@ -91,6 +92,27 @@ export default defineEventHandler(async (event) => {
           hash: fileInformation.hash,
         },
         isDuplicate: true,
+        isInvalid: false,
+        headers: {},
+      })
+      continue
+    }
+
+    if (isValidMediaContent(fileInformation.contentType) === false) {
+      signedPayloads.push({
+        url: '',
+        thumbnailUrl: '',
+        payload: {
+          filename: '',
+          filekey: '',
+          thumbnailFilekey: '',
+          id: '',
+          contentType: fileInformation.contentType,
+          length: fileInformation.length,
+          hash: fileInformation.hash,
+        },
+        isDuplicate: false,
+        isInvalid: true,
         headers: {},
       })
       continue
@@ -142,6 +164,7 @@ export default defineEventHandler(async (event) => {
         'Content-Type': fileInformation.contentType,
       },
       isDuplicate: false,
+      isInvalid: false,
     })
   }
 

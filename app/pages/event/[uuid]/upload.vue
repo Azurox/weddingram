@@ -11,7 +11,21 @@ useSeoMeta({
   title: () => `Weddingram - ${event?.value?.name ?? 'event'} | Upload`,
 })
 
-const { isUploadCompleted } = useGlobalPictureUploader()
+const { isUploadCompleted, latestUploadResult } = useGlobalPictureUploader()
+
+// Only show success message if there were actually successful uploads
+const showSuccessMessage = computed(() => {
+  if (!isUploadCompleted.value)
+    return false
+
+  // If we have upload results, check if there were successful uploads
+  if (latestUploadResult.value) {
+    return latestUploadResult.value.successCount > 0
+  }
+
+  // If no detailed results, assume success (fallback for filesystem strategy)
+  return true
+})
 </script>
 
 <template>
@@ -27,7 +41,7 @@ const { isUploadCompleted } = useGlobalPictureUploader()
       <UiContainer>
         <event-upload-form :upload-target="event?.bucketType" />
       </UiContainer>
-      <UiContainer v-if="isUploadCompleted" class="w-full px-2">
+      <UiContainer v-if="showSuccessMessage" class="w-full px-2">
         <div class="bg-green-50 border border-green-200 rounded-lg w-full max-w-2xl mx-auto p-4 flex items-center gap-3">
           <svg class="size-6 text-green-600" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
             <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zM10 17l-5-5l1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
@@ -42,6 +56,7 @@ const { isUploadCompleted } = useGlobalPictureUploader()
           </div>
         </div>
       </UiContainer>
+      <event-upload-result-details />
       <UiContainer class="w-full px-2">
         <div class="bg-merino-50 border border-almond-200 rounded-lg w-full max-w-2xl mx-auto p-4 flex flex-col gap-4">
           <div class="flex gap-2 items-center">

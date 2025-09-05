@@ -1,6 +1,18 @@
 <script lang="ts" setup>
 const { uuid } = useRoute().params as { uuid: string }
-const { isUploadCompleted } = useGlobalPictureUploader()
+const { isUploadCompleted, latestUploadResult } = useGlobalPictureUploader()
+
+// Show notification only if there were successful uploads
+const shouldShowNotification = computed(() => {
+  if (!isUploadCompleted.value)
+    return false
+
+  if (latestUploadResult.value) {
+    return latestUploadResult.value.successCount > 0
+  }
+
+  return true
+})
 
 function dismissUploadNotification() {
   if (isUploadCompleted.value) {
@@ -16,7 +28,7 @@ function dismissUploadNotification() {
         <NuxtLink :to="`/event/${uuid}/`" class="py-3 px-4 flex items-center justify-center group relative" active-class="active" @click="dismissUploadNotification">
           <svg class="size-7 stroke-2 stroke-neutral-600 text-transparent group-[.active]:text-almond-500 group-[.active]:stroke-almond-500" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M4 21V9l8-6l8 6v12h-6v-7h-4v7z" /></svg>
           <span class="sr-only">Go to home</span>
-          <span v-if="isUploadCompleted" class="block size-3 rounded-full absolute right-2 top-2 bg-gradient-to-b from-almond-300 via-almond-500 to-almond-700/20 shadow-lg shadow-black/60 border border-almond-800/10 before:content-[''] before:absolute before:inset-0.5 before:bg-gradient-to-b before:from-white/60 before:to-transparent before:rounded-full" />
+          <span v-if="shouldShowNotification" class="block size-3 rounded-full absolute right-2 top-2 bg-gradient-to-b from-almond-300 via-almond-500 to-almond-700/20 shadow-lg shadow-black/60 border border-almond-800/10 before:content-[''] before:absolute before:inset-0.5 before:bg-gradient-to-b before:from-white/60 before:to-transparent before:rounded-full" />
         </NuxtLink>
       </li>
       <li>

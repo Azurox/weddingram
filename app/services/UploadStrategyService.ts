@@ -1,45 +1,98 @@
 import type { InquirePayload } from '~~/server/api/events/single/[id]/inquire-upload.post'
 import type { EventBucketType } from '~~/server/database/schema/event-schema'
+import type { BatchUploadResult, DuplicateMedia, InvalidFile, UploadedMedia } from '~~/shared/types/BatchUploadResult'
 import type { FileProcessingResult } from './FileProcessorService'
+import { FetchError } from 'ofetch'
 import { FileProcessorService } from './FileProcessorService'
 
-export interface UploadResult {
-  id: string
-  url: string
-  deleteId: string
-  thumbnailUrl: string | null
-  isVideo: boolean
-}
-
 export interface ClientUploadStrategy {
-  upload: (batch: FileProcessingResult[], eventId: string) => Promise<UploadResult[]>
+  upload: (batch: FileProcessingResult[], eventId: string) => Promise<BatchUploadResult>
 }
 
 export class FilesystemUploadStrategy implements ClientUploadStrategy {
-  async upload(batch: FileProcessingResult[], eventId: string): Promise<UploadResult[]> {
+  async upload(batch: FileProcessingResult[], eventId: string): Promise<BatchUploadResult> {
     const filesInformations = batch.map(item => ({
       hash: item.hash,
       capturedAt: item.capturedAt,
     }))
 
     if (filesInformations.length === 0) {
-      return []
+      return {
+        uploadedMedia: [],
+        duplicateMedia: [],
+        invalidFiles: [],
+      }
     }
 
-    return await $fetch(`/api/events/single/${eventId}/upload`, {
-      method: 'POST',
-      body: {
-        files: batch.map(item => item.file),
-        filesInformations,
-      },
-    })
+    try {
+      const batchResult = await $fetch(`/api/events/single/${eventId}/upload`, {
+        method: 'POST',
+        body: {
+          files: batch.map(item => item.file),
+          filesInformations,
+        },
+      })
+
+      return batchResult
+    }
+    catch (error: unknown) {
+      // Rethrow other possible errors
+      if (!(error instanceof FetchError) || error.status !== 422)
+        throw error
+
+      const duplicateMedia: DuplicateMedia[] = []
+      const invalidFiles: InvalidFile[] = []
+
+      const typedError = error as FetchError<{ data: { duplicates?: Array<{ hash: string }>, invalidFiles?: Array<{ hash: string, reason: string }>, uploaded?: UploadedMedia[] } }>
+      const errorPayload = typedError.data?.data
+
+      if (errorPayload === undefined || errorPayload.duplicates === undefined || errorPayload.invalidFiles === undefined) {
+        throw error
+      }
+
+      errorPayload.duplicates.forEach((dup: { hash: string }) => {
+        const file = batch.find(f => f.hash === dup.hash)
+
+        if (file && typeof file.file.content === 'string') {
+          duplicateMedia.push({
+            name: file.file.name,
+            hash: dup.hash,
+            file: file.file.content,
+            contentType: file.file.type,
+          })
+        }
+      })
+
+      errorPayload.invalidFiles.forEach((invalid) => {
+        const file = batch.find(f => f.hash === invalid.hash)
+        if (file) {
+          invalidFiles.push({
+            name: file.file.name,
+            contentType: file.file.type,
+            reason: invalid.reason,
+            hash: invalid.hash,
+          })
+        }
+      })
+
+      if (duplicateMedia.length > 0 || invalidFiles.length > 0) {
+        return {
+          uploadedMedia: typedError.data?.data.uploaded || [],
+          duplicateMedia,
+          invalidFiles,
+        }
+      }
+      else {
+        // This case should not happen, if there is a 422 error, we should have either duplicates or invalid files
+        throw error
+      }
+    }
   }
 }
 
 export class R2UploadStrategy implements ClientUploadStrategy {
-  async upload(batch: FileProcessingResult[], eventId: string): Promise<UploadResult[]> {
+  async upload(batch: FileProcessingResult[], eventId: string): Promise<BatchUploadResult> {
     // Step 1: Inquire for upload URLs
-
     const inquiryInformations = batch.map(item => ({
       hash: item.hash,
       extension: item.file.name.split('.').pop() || '',
@@ -52,12 +105,39 @@ export class R2UploadStrategy implements ClientUploadStrategy {
       body: inquiryInformations,
     })
 
+    // Track duplicates and invalid files from inquiry
+    const duplicateMedia: DuplicateMedia[] = []
+    const invalidFiles: InvalidFile[] = []
+
+    inquiryUploadUrls.forEach((result: InquirePayload, index: number) => {
+      const originalFile = batch[index]
+      if (!originalFile)
+        return
+
+      if (result.isDuplicate && typeof originalFile.file.content === 'string') {
+        duplicateMedia.push({
+          name: originalFile.file.name,
+          hash: result.payload.hash,
+          file: originalFile.file.content, // data URL
+          contentType: originalFile.file.type,
+        })
+      }
+      else if (result.isInvalid) {
+        invalidFiles.push({
+          name: originalFile.file.name,
+          contentType: result.payload.contentType,
+          reason: 'Invalid file type',
+          hash: result.payload.hash,
+        })
+      }
+    })
+
     // Step 2: Upload files to R2 using presigned URLs
     await this.uploadToR2(batch, inquiryUploadUrls)
 
     // Step 3: Confirm uploads with the server
     const mergedFileInformations = inquiryUploadUrls
-      .filter(info => !info.isDuplicate)
+      .filter(info => info.isDuplicate === false && info.isInvalid === false)
       .map((info) => {
         const originalIndex = inquiryUploadUrls.indexOf(info)
         return {
@@ -67,17 +147,28 @@ export class R2UploadStrategy implements ClientUploadStrategy {
         }
       })
 
-    if (mergedFileInformations.length === 0) {
-      // All files were duplicates, nothing to confirm
-      return []
+    let uploadedMedia: UploadedMedia[] = []
+    if (mergedFileInformations.length > 0) {
+      try {
+        const response = await $fetch(`/api/events/single/${eventId}/upload`, {
+          method: 'POST',
+          body: {
+            filesInformations: mergedFileInformations,
+          },
+        })
+        uploadedMedia = response.uploadedMedia
+      }
+      catch (error) {
+        console.error('Failed to confirm uploads:', error)
+        uploadedMedia = []
+      }
     }
 
-    return await $fetch(`/api/events/single/${eventId}/upload`, {
-      method: 'POST',
-      body: {
-        filesInformations: mergedFileInformations,
-      },
-    })
+    return {
+      uploadedMedia,
+      duplicateMedia,
+      invalidFiles,
+    }
   }
 
   private async uploadToR2(batch: FileProcessingResult[], inquiryUploadUrls: InquirePayload[]) {
@@ -87,6 +178,11 @@ export class R2UploadStrategy implements ClientUploadStrategy {
 
       if (uploadData?.isDuplicate) {
         console.warn(`File ${file?.name} is a duplicate, skipping upload.`)
+        continue
+      }
+
+      if (uploadData?.isInvalid) {
+        console.warn(`File ${file?.name} is invalid, skipping upload. Verify extension and content type. Type: ${file?.type}`)
         continue
       }
 

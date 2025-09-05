@@ -3,16 +3,24 @@ export interface ProgressState {
   total: number
 }
 
+export interface UploadResultDetails {
+  successCount: number
+  duplicateFiles: Array<{ name: string, hash: string, file: string, contentType: string }>
+  invalidFiles: Array<{ name: string, contentType: string, reason: string }>
+}
+
 export function useUploadState() {
   const isLoading = useState('uploadState:isLoading', () => false)
   const progress = useState<ProgressState | null>('uploadState:progress', () => null)
   const isUploadCompleted = useState('uploadState:isCompleted', () => false)
   const error = useState<Error | null>('uploadState:error', () => null)
+  const latestUploadResult = useState<UploadResultDetails | null>('uploadState:latestResult', () => null)
 
   function start(totalFiles: number) {
     isLoading.value = true
     isUploadCompleted.value = false
     error.value = null
+    latestUploadResult.value = null
     progress.value = { current: 0, total: totalFiles }
   }
 
@@ -32,11 +40,16 @@ export function useUploadState() {
     error.value = err
   }
 
+  function setUploadResult(result: UploadResultDetails) {
+    latestUploadResult.value = result
+  }
+
   function reset() {
     isLoading.value = false
     isUploadCompleted.value = false
     error.value = null
     progress.value = null
+    latestUploadResult.value = null
   }
 
   return {
@@ -45,12 +58,14 @@ export function useUploadState() {
     progress: readonly(progress),
     error: readonly(error),
     isUploadCompleted,
+    latestUploadResult: readonly(latestUploadResult),
 
     // Actions
     start,
     incrementProgress,
     complete,
     setError,
+    setUploadResult,
     reset,
   }
 }
