@@ -1,5 +1,6 @@
 import type { events } from '~~/server/database/schema/event-schema'
-import type { ProcessedFileInfo, R2ProcessedFileInfo, UploadResult, UploadStrategy } from './UploadStrategy'
+import type { BatchUploadResult } from '~~/shared/types/BatchUploadResult'
+import type { ProcessedFileInfo, R2ProcessedFileInfo, UploadStrategy } from './UploadStrategy'
 import crypto from 'node:crypto'
 import { useDrizzle } from '~~/server/database'
 import { medias } from '~~/server/database/schema/media-schema'
@@ -14,7 +15,7 @@ export class R2UploadStrategy implements UploadStrategy {
     eventId: string,
     guestId: string,
     event: typeof events.$inferSelect,
-  ): Promise<UploadResult[]> {
+  ): Promise<BatchUploadResult> {
     if (event.bucketType !== 'R2') {
       throw createError({
         statusCode: 400,
@@ -24,7 +25,11 @@ export class R2UploadStrategy implements UploadStrategy {
 
     const db = useDrizzle()
     const pictureRecords: Array<typeof medias.$inferInsert> = []
-    const results: UploadResult[] = []
+    const result: BatchUploadResult = {
+      duplicateMedia: [],
+      invalidFiles: [],
+      uploadedMedia: [],
+    }
 
     for (const fileInfo of files) {
       try {
@@ -65,7 +70,7 @@ export class R2UploadStrategy implements UploadStrategy {
           mediaType: isVideo ? 'video' : 'picture',
         })
 
-        results.push({
+        result.uploadedMedia.push({
           id: pictureId,
           url: uploadResult.url,
           thumbnailUrl: uploadResult.thumbnailUrl,
@@ -87,7 +92,7 @@ export class R2UploadStrategy implements UploadStrategy {
       await db.insert(medias).values(pictureRecords).onConflictDoNothing()
     }
 
-    return results
+    return result
   }
 
   private async verifyPictureWasUploaded(
