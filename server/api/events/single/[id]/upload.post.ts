@@ -1,6 +1,5 @@
 import type { ServerFile } from 'nuxt-file-storage'
-import type { ProcessedFileInfo } from '~~/server/service/upload/UploadStrategy'
-import type { UploadResult } from '~/services/UploadStrategyService'
+import type { ProcessedFileInfo, UploadResult } from '~~/server/service/upload/UploadStrategy'
 import z from 'zod'
 import { getEventById } from '~~/server/service/EventService'
 import { PictureUploadOrchestrator } from '~~/server/service/upload/PictureUploadOrchestrator'

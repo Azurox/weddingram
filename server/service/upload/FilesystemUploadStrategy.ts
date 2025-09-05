@@ -7,7 +7,7 @@ import path from 'node:path'
 import sharp from 'sharp'
 import { useDrizzle } from '~~/server/database'
 import { medias } from '~~/server/database/schema/media-schema'
-import { buildFilesystemUploadedPictureUrl, buildFilesystemUploadedThumbnailUrl, getUploadedPictureFolder, getUploadedThumbnailFolder, isMediaVideoContent } from '~~/server/service/ImageService'
+import { buildFilesystemUploadedPictureUrl, buildFilesystemUploadedThumbnailUrl, getUploadedPictureFolder, getUploadedThumbnailFolder, isMediaVideoContent, isValidMediaContent } from '~~/server/service/ImageService'
 import { THUMBNAIL_PROPERTY } from '~~/shared/utils/constants'
 
 export class FilesystemUploadStrategy implements UploadStrategy {
@@ -28,9 +28,40 @@ export class FilesystemUploadStrategy implements UploadStrategy {
 
     const db = useDrizzle()
     const pictureRecords: Array<typeof medias.$inferInsert> = []
-    const results: UploadResult[] = []
+    const fileInfoMap = new Map<string, { fileInfo: ProcessedFileInfo, mediaId: string, url: string, thumbnailUrl: string | null, deleteId: string, isVideo: boolean }>()
+
+    const invalidFiles: Array<{ hash: string, reason: string }> = []
+    const validFiles: ProcessedFileInfo[] = []
 
     for (const fileInfo of files) {
+      if (!fileInfo.file) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'File data is required for filesystem uploads',
+        })
+      }
+
+      if (!isValidMediaContent(fileInfo.contentType)) {
+        invalidFiles.push({ hash: fileInfo.hash, reason: 'Invalid file type' })
+        continue
+      }
+
+      validFiles.push(fileInfo)
+    }
+
+    if (invalidFiles.length > 0) {
+      throw createError({
+        statusCode: 422,
+        statusMessage: 'Some files are invalid',
+        data: {
+          duplicates: [],
+          invalidFiles,
+          uploaded: [],
+        },
+      })
+    }
+
+    for (const fileInfo of validFiles) {
       if (!fileInfo.file) {
         throw createError({
           statusCode: 400,
@@ -63,7 +94,7 @@ export class FilesystemUploadStrategy implements UploadStrategy {
 
         const magicDeleteId = crypto.randomUUID()
 
-        pictureRecords.push({
+        const recordToInsert = {
           filename,
           eventId,
           id: mediaId,
@@ -75,10 +106,13 @@ export class FilesystemUploadStrategy implements UploadStrategy {
           size: Number((fileInfo.file as ServerFile).size + thumbnailSize),
           magicDeleteId,
           mediaType: isVideo ? 'video' : 'picture',
-        })
+        } as const
 
-        results.push({
-          id: mediaId,
+        pictureRecords.push(recordToInsert)
+
+        fileInfoMap.set(fileInfo.hash, {
+          fileInfo,
+          mediaId,
           url,
           thumbnailUrl,
           deleteId: magicDeleteId,
@@ -94,9 +128,46 @@ export class FilesystemUploadStrategy implements UploadStrategy {
       }
     }
 
-    // Batch insert all successfully processed pictures
-    if (pictureRecords.length > 0) {
-      await db.insert(medias).values(pictureRecords).onConflictDoNothing()
+    // Batch insert all successfully processed pictures with conflict handling
+    const insertedRecords = await db.insert(medias).values(pictureRecords).onConflictDoNothing().returning({
+      id: medias.id,
+      pictureHash: medias.pictureHash,
+    })
+
+    const results: UploadResult[] = []
+    const insertedHashes = new Set(insertedRecords.map(record => record.pictureHash))
+
+    for (const record of insertedRecords) {
+      const mappedData = fileInfoMap.get(record.pictureHash)
+      if (mappedData) {
+        results.push({
+          id: mappedData.mediaId,
+          url: mappedData.url,
+          thumbnailUrl: mappedData.thumbnailUrl,
+          deleteId: mappedData.deleteId,
+          isVideo: mappedData.isVideo,
+        })
+      }
+    }
+
+    const duplicateHashes = files
+      .map(f => f.hash)
+      .filter(hash => !insertedHashes.has(hash))
+
+    if (duplicateHashes.length > 0) {
+      const duplicates = duplicateHashes.map(hash => ({
+        hash,
+      }))
+
+      throw createError({
+        statusCode: 422,
+        statusMessage: 'Some files are duplicates',
+        data: {
+          duplicates,
+          invalidFiles: [],
+          uploaded: results,
+        },
+      })
     }
 
     return results

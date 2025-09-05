@@ -40,3 +40,23 @@ export function buildFilesystemUploadedThumbnailUrl(eventId: string, filename: s
 export function isMediaVideoContent(contentType: string) {
   return contentType.startsWith('video/')
 }
+
+export function isValidMediaContent(contentType: string): boolean {
+  const allowedImageTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+    'image/avif',
+  ]
+
+  const allowedVideoTypes = [
+    'video/mp4',
+    'video/quicktime',
+    'video/3gpp',
+    'video/webm',
+  ]
+
+  return allowedImageTypes.includes(contentType) || allowedVideoTypes.includes(contentType)
+}
