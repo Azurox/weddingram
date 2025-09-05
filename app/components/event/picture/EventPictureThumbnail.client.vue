@@ -71,10 +71,10 @@ function handleTouchEnd() {
 
 <template>
   <div class="relative overflow-hidden select-none">
-    <button class="appearance-none border-0 rounded-none bg-none w-full h-full block relative" @touchstart="handleTouchStart" @click="handleTouchEnd" @mousedown="handleTouchStart" @contextmenu.prevent>
+    <button class="appearance-none border-0 rounded-none bg-none w-full h-full block relative" @touchstart.capture="handleTouchStart" @click="handleTouchEnd" @mousedown="handleTouchStart" @contextmenu.prevent>
       <template v-if="picture.mediaType === 'picture' && picture.thumbnailUrl">
         <img
-          ref="imageRef" :src="picture.thumbnailUrl" class="w-full h-full aspect-square object-cover pointer-events-none" :class="[
+          ref="imageRef" :src="picture.thumbnailUrl" class="w-full h-full aspect-square object-cover select-none pointer-events-none" :class="[
             isLoaded ? 'scale-100 opacity-100' : 'scale-105 opacity-0',
             shouldAnimate ? 'transition-all duration-700' : '',
           ]" :data-loaded="isLoaded" @load="handleImageLoad"
@@ -82,7 +82,7 @@ function handleTouchEnd() {
       </template>
       <template v-else-if="picture.mediaType === 'video'">
         <video class="w-full aspect-square object-cover pointer-events-none bg-almond-500/5" :data-loaded="isLoaded" muted playsinline preload="metadata" @loadeddata="handleImageLoad">
-          <source :src="picture.url" type="video/mp4">
+          <source :src="`${picture.url}#t=0.1`" type="video/mp4">
           Your browser does not support this video.
         </video>
 
