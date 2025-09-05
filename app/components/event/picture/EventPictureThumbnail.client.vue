@@ -72,7 +72,7 @@ function handleTouchEnd() {
 <template>
   <div class="relative overflow-hidden select-none">
     <button class="appearance-none border-0 rounded-none bg-none w-full h-full block relative" @touchstart="handleTouchStart" @click="handleTouchEnd" @mousedown="handleTouchStart" @contextmenu.prevent>
-      <template v-if="picture.mediaType === 'picture'">
+      <template v-if="picture.mediaType === 'picture' && picture.thumbnailUrl">
         <img
           ref="imageRef" :src="picture.thumbnailUrl" class="w-full h-full aspect-square object-cover pointer-events-none" :class="[
             isLoaded ? 'scale-100 opacity-100' : 'scale-105 opacity-0',

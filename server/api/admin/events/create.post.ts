@@ -50,6 +50,13 @@ export default defineEventHandler(async (event) => {
     id: events.id,
   })
 
+  if (!createdEvent) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Failed to create event',
+    })
+  }
+
   if (coverImage) {
     const savedImageUrl = await saveCoverImage(bucketType, coverImage, createdEvent.id)
 
