@@ -12,6 +12,7 @@ export function useGlobalPictureUploader() {
   const { addUploadedPictures } = useUploadedPictureStorage()
 
   const uploadState = useUploadState()
+  const { isSupported, request, release } = useWakeLock()
 
   const route = useRoute()
   const eventId = computed(() => route.params.uuid as string)
@@ -20,6 +21,10 @@ export function useGlobalPictureUploader() {
     uploadState.start(files.length)
 
     try {
+      if (isSupported) {
+        await request('screen')
+      }
+
       const strategy = UploadStrategyService.getStrategy(bucketType)
 
       // Set up progress callback for strategies that support file progress
@@ -91,6 +96,11 @@ export function useGlobalPictureUploader() {
       })
 
       uploadState.setError(error instanceof Error ? error : new Error('Unknown upload error'))
+    }
+    finally {
+      if (isSupported) {
+        await release()
+      }
     }
   }
 
