@@ -7,9 +7,20 @@ import { FileProcessorService } from './FileProcessorService'
 
 export interface ClientUploadStrategy {
   upload: (batch: FileProcessingResult[], eventId: string) => Promise<BatchUploadResult>
+  readonly supportsFileProgress: boolean
+}
+
+export interface UploadProgressCallback {
+  (fileName: string, percentage: number, uploadedBytes: number, totalBytes: number): void
+}
+
+export interface FileProgressCapable {
+  setProgressCallback: (callback: UploadProgressCallback) => void
 }
 
 export class FilesystemUploadStrategy implements ClientUploadStrategy {
+  readonly supportsFileProgress = false
+
   async upload(batch: FileProcessingResult[], eventId: string): Promise<BatchUploadResult> {
     const filesInformations = batch.map(item => ({
       hash: item.hash,
@@ -90,8 +101,25 @@ export class FilesystemUploadStrategy implements ClientUploadStrategy {
   }
 }
 
-export class R2UploadStrategy implements ClientUploadStrategy {
+export class R2UploadStrategy implements ClientUploadStrategy, FileProgressCapable {
+  readonly supportsFileProgress = true
+  private onUploadProgress?: UploadProgressCallback
+  private currentFileName: string | null = null
+  private completedFiles = new Set<string>()
+
+  setProgressCallback(callback: UploadProgressCallback) {
+    this.onUploadProgress = callback
+  }
+
+  resetProgressTracking() {
+    this.currentFileName = null
+    this.completedFiles.clear()
+  }
+
   async upload(batch: FileProcessingResult[], eventId: string): Promise<BatchUploadResult> {
+    // Reset progress tracking for new batch
+    this.resetProgressTracking()
+
     // Step 1: Inquire for upload URLs
     const inquiryInformations = batch.map(item => ({
       hash: item.hash,
@@ -187,34 +215,87 @@ export class R2UploadStrategy implements ClientUploadStrategy {
       }
 
       if (file && uploadData && 'url' in uploadData && typeof file.content === 'string') {
-        // Convert string content to ArrayBuffer for upload
-        const response = await fetch(file.content) // file.content is a data URL
-        const arrayBuffer = await response.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
+        console.warn('upload', `Uploading file: ${file.name}`)
 
-        // Prepare upload promises for parallel execution
-        const uploadPromises: Promise<unknown>[] = [
-          $fetch(uploadData.url, {
-            method: 'PUT',
-            headers: uploadData.headers,
-            body: uint8Array,
-          }),
-        ]
-
-        // Add thumbnail upload if required
-        if (uploadData.thumbnailUrl) {
-          const thumbnailUploadPromise = FileProcessorService.generateThumbnail(uint8Array)
-            .then(thumbnailBlob => $fetch(uploadData.thumbnailUrl!, {
-              method: 'PUT',
-              headers: uploadData.headers,
-              body: thumbnailBlob,
-            }))
-          uploadPromises.push(thumbnailUploadPromise)
+        // Fast conversion from base64 to binary
+        const base64Data = file.content.split(',')[1]
+        if (!base64Data) {
+          throw new Error(`Invalid data URL for file: ${file.name}`)
+        }
+        const binaryString = atob(base64Data)
+        const uint8Array = new Uint8Array(binaryString.length)
+        for (let j = 0; j < binaryString.length; j++) {
+          uint8Array[j] = binaryString.charCodeAt(j)
         }
 
-        await Promise.all(uploadPromises)
+        // Upload main file with progress tracking
+        await this.uploadWithStreamProgress(uploadData.url, uint8Array, uploadData.headers, file.name)
+
+        // Handle thumbnail upload separately (without progress tracking for thumbnails)
+        if (uploadData.thumbnailUrl && !file.type.startsWith('video/')) {
+          const thumbnailBlob = await FileProcessorService.generateThumbnail(uint8Array)
+          await $fetch(uploadData.thumbnailUrl, {
+            method: 'PUT',
+            headers: uploadData.headers,
+            body: thumbnailBlob,
+          })
+        }
+
+        console.warn('upload', `Completed upload: ${file.name}`)
       }
     }
+  }
+
+  private uploadWithStreamProgress = async (url: string, data: Uint8Array, headers: Record<string, string>, fileName: string): Promise<void> => {
+    const totalSize = data.length
+
+    // Use XMLHttpRequest for reliable progress tracking with presigned URLs
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+
+      // Track upload progress
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded / event.total) * 100
+
+          // Reset progress to 0 when starting a new file
+          if (this.currentFileName !== fileName) {
+            this.currentFileName = fileName
+            this.onUploadProgress?.(fileName, 0, 0, event.total)
+          }
+
+          this.onUploadProgress?.(fileName, percentComplete, event.loaded, event.total)
+        }
+      })
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // Ensure we report 100% completion and mark file as completed
+          if (!this.completedFiles.has(fileName)) {
+            this.completedFiles.add(fileName)
+            this.onUploadProgress?.(fileName, 100, totalSize, totalSize)
+          }
+          this.currentFileName = null
+          resolve()
+        }
+        else {
+          reject(new Error(`Upload failed with status ${xhr.status}`))
+        }
+      })
+
+      xhr.addEventListener('error', () => {
+        reject(new Error(`Upload failed for ${fileName}`))
+      })
+
+      xhr.open('PUT', url)
+
+      // Set headers
+      Object.entries(headers).forEach(([key, value]) => {
+        xhr.setRequestHeader(key, value)
+      })
+
+      xhr.send(data as unknown as ArrayBuffer) // Send as ArrayBuffer
+    })
   }
 }
 

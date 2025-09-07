@@ -3,13 +3,20 @@ defineProps<{
   shouldDisplay: boolean
 }>()
 
-const { progress } = useGlobalPictureUploader()
+const { progress, currentFileBeingUploaded } = useGlobalPictureUploader()
 
 const formatedProgressString = computed(() => {
   const numberOfPictureUploaded = Math.max(progress.value?.current ?? 1, 1)
   const maxNumberOfPicture = Math.max(progress.value?.total ?? 1, numberOfPictureUploaded)
 
   return `${numberOfPictureUploaded} / ${maxNumberOfPicture}`
+})
+
+const formatedPercentage = computed(() => {
+  if (!currentFileBeingUploaded.value?.percentage || currentFileBeingUploaded.value.percentage === 0) {
+    return 0
+  }
+  return Math.round(currentFileBeingUploaded.value?.percentage)
 })
 </script>
 
@@ -19,6 +26,11 @@ const formatedProgressString = computed(() => {
       <span class="font-logo text-2xl tracking-wide">Uploading your pictures...</span>
       <div class="loader text-almond-300" />
       <span class="font-bold">Progress: {{ formatedProgressString }}</span>
+      <div class="h-10 flex items-center font-bold text-almond-500">
+        <span v-if="formatedPercentage > 0">
+          {{ formatedPercentage }}%
+        </span>
+      </div>
 
       <UiContainer v-if="progress && progress.total > 10" class="w-full">
         <span class="p-4  mt-10 block bg-white border border-dashed border-almond-500 text-neutral-600 text-center rounded-lg">
