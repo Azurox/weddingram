@@ -13,7 +13,7 @@ const formatedProgressString = computed(() => {
 })
 
 const formatedPercentage = computed(() => {
-  if (!currentFileBeingUploaded.value?.percentage || currentFileBeingUploaded.value.percentage === 0) {
+  if (!currentFileBeingUploaded.value?.percentage) {
     return 0
   }
   return Math.round(currentFileBeingUploaded.value?.percentage)

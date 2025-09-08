@@ -215,8 +215,6 @@ export class R2UploadStrategy implements ClientUploadStrategy, FileProgressCapab
       }
 
       if (file && uploadData && 'url' in uploadData && typeof file.content === 'string') {
-        console.warn('upload', `Uploading file: ${file.name}`)
-
         // Fast conversion from base64 to binary
         const base64Data = file.content.split(',')[1]
         if (!base64Data) {
@@ -240,8 +238,6 @@ export class R2UploadStrategy implements ClientUploadStrategy, FileProgressCapab
             body: thumbnailBlob,
           })
         }
-
-        console.warn('upload', `Completed upload: ${file.name}`)
       }
     }
   }
