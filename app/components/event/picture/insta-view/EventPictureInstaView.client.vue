@@ -62,7 +62,7 @@ onMounted(() => {
         </span>
       </UiContainer>
     </button>
-    <div ref="scrollContainer" class="flex flex-col gap-10 snap-y snap-proximity overflow-auto scroll-pt-4 pt-4 pb-40">
+    <div ref="scrollContainer" class="flex flex-col gap-10 snap-y snap-mandatory overflow-auto scroll-pt-4 pt-4 pb-40">
       <EventPictureInstaViewThumbnail v-for="picture in pictureList" :id="`instaview-${picture.id}`" :key="picture.id" :picture="picture" :allow-double-tap="allowDoubleTap" />
       <span v-if="!hasMore && !isLoading" class="text-center text-2xl italic text-neutral-600 font-logo">
         The end.

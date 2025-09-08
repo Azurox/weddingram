@@ -1,6 +1,7 @@
 import type { ClientFile } from 'nuxt-file-storage'
 import type { EventBucketType } from '~~/server/database/schema/event-schema'
 import type { UploadResultDetails } from './state/useUploadState'
+import type { ClientUploadStrategy, FileProgressCapable } from '~/services/UploadStrategyService'
 import { BatchUploadService } from '~/services/BatchUploadService'
 import { FileProcessorService } from '~/services/FileProcessorService'
 import { ToastService } from '~/services/ToastService'
@@ -11,6 +12,7 @@ export function useGlobalPictureUploader() {
   const { addUploadedPictures } = useUploadedPictureStorage()
 
   const uploadState = useUploadState()
+  const { isSupported, request, release } = useWakeLock()
 
   const route = useRoute()
   const eventId = computed(() => route.params.uuid as string)
@@ -19,7 +21,26 @@ export function useGlobalPictureUploader() {
     uploadState.start(files.length)
 
     try {
+      if (isSupported) {
+        await request('screen')
+      }
+
       const strategy = UploadStrategyService.getStrategy(bucketType)
+
+      // Set up progress callback for strategies that support file progress
+      if (strategy.supportsFileProgress && 'setProgressCallback' in strategy) {
+        const progressCapableStrategy = strategy as ClientUploadStrategy & FileProgressCapable
+        progressCapableStrategy.setProgressCallback((fileName: string, percentage: number, uploadedBytes: number, totalBytes: number) => {
+          uploadState.setFileUploadProgress(fileName, percentage, uploadedBytes, totalBytes)
+
+          // When file completes (100%), increment the batch progress and clear file progress
+          if (percentage >= 100) {
+            uploadState.incrementProgress(1)
+            uploadState.clearFileUploadProgress()
+          }
+        })
+      }
+
       const processedFiles = await FileProcessorService.processFiles(files)
 
       const result = await BatchUploadService.uploadInBatches(
@@ -31,7 +52,7 @@ export function useGlobalPictureUploader() {
           onBatchComplete: (batchResult, _batchIndex) => {
             // Add only the uploaded media to storage
             addUploadedPictures(batchResult.uploadedMedia)
-            uploadState.incrementProgress(batchResult.uploadedMedia.length)
+            // Note: Progress is now incremented per file in the progress callback, not per batch
           },
           onBatchError: (error: unknown, batchIndex) => {
             console.error(`Batch ${batchIndex} failed:`, error)
@@ -76,6 +97,11 @@ export function useGlobalPictureUploader() {
 
       uploadState.setError(error instanceof Error ? error : new Error('Unknown upload error'))
     }
+    finally {
+      if (isSupported) {
+        await release()
+      }
+    }
   }
 
   return {
@@ -84,6 +110,7 @@ export function useGlobalPictureUploader() {
     isUploadCompleted: uploadState.isUploadCompleted,
     latestUploadResult: uploadState.latestUploadResult,
     error: uploadState.error,
+    currentFileBeingUploaded: uploadState.fileUploadProgress,
 
     uploadPictures,
     reset: uploadState.reset,

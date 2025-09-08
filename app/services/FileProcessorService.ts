@@ -18,9 +18,16 @@ export class FileProcessorService {
     if (typeof file.content !== 'string') {
       throw new TypeError('File content is not a string')
     }
+
+    let contentToEncode = file.content
+
+    if (file.type.startsWith('video/')) {
+      contentToEncode = `${file.name || 'unknown'}-${file.size || 0}-${file.lastModified || 0}` // Use metadata for video hash to speed up processing. Video duplicates are less likely.
+    }
+
     // Convert string content to ArrayBuffer
     const encoder = new TextEncoder()
-    const data = encoder.encode(file.content) // file.content is a data URL
+    const data = encoder.encode(contentToEncode) // file.content is a data URL
     const hashBuffer = await crypto.subtle.digest('SHA-256', data)
     const hashArray = Array.from(new Uint8Array(hashBuffer))
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
@@ -62,6 +69,7 @@ export class FileProcessorService {
   static async processFile(file: ClientFile): Promise<FileProcessingResult> {
     const hash = await this.calculateFileHash(file)
     const { capturedAt } = await this.extractExifData(file)
+
     return { hash, capturedAt, file }
   }
 

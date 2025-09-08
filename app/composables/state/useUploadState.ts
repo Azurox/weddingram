@@ -3,6 +3,13 @@ export interface ProgressState {
   total: number
 }
 
+export interface FileUploadProgress {
+  fileName: string
+  percentage: number
+  uploadedBytes: number
+  totalBytes: number
+}
+
 export interface UploadResultDetails {
   successCount: number
   duplicateFiles: Array<{ name: string, hash: string, file: string, contentType: string }>
@@ -12,6 +19,7 @@ export interface UploadResultDetails {
 export function useUploadState() {
   const isLoading = useState('uploadState:isLoading', () => false)
   const progress = useState<ProgressState | null>('uploadState:progress', () => null)
+  const fileUploadProgress = useState<FileUploadProgress | null>('uploadState:fileProgress', () => null)
   const isUploadCompleted = useState('uploadState:isCompleted', () => false)
   const error = useState<Error | null>('uploadState:error', () => null)
   const latestUploadResult = useState<UploadResultDetails | null>('uploadState:latestResult', () => null)
@@ -28,6 +36,19 @@ export function useUploadState() {
     if (progress.value) {
       progress.value.current += count
     }
+  }
+
+  function setFileUploadProgress(fileName: string, percentage: number, uploadedBytes: number, totalBytes: number) {
+    fileUploadProgress.value = {
+      fileName,
+      percentage,
+      uploadedBytes,
+      totalBytes,
+    }
+  }
+
+  function clearFileUploadProgress() {
+    fileUploadProgress.value = null
   }
 
   function complete() {
@@ -49,6 +70,7 @@ export function useUploadState() {
     isUploadCompleted.value = false
     error.value = null
     progress.value = null
+    fileUploadProgress.value = null
     latestUploadResult.value = null
   }
 
@@ -56,6 +78,7 @@ export function useUploadState() {
     // State
     isLoading: readonly(isLoading),
     progress: readonly(progress),
+    fileUploadProgress: readonly(fileUploadProgress),
     error: readonly(error),
     isUploadCompleted,
     latestUploadResult: readonly(latestUploadResult),
@@ -63,6 +86,8 @@ export function useUploadState() {
     // Actions
     start,
     incrementProgress,
+    setFileUploadProgress,
+    clearFileUploadProgress,
     complete,
     setError,
     setUploadResult,
